@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="nokia_bg">#C7F0D8</color>
+    <color name="nokia_dark_text">#3A3F44</color>
+    <color name="nokia_grid_line">#A2C5B1</color>
+
+    <!-- Material Design Colors for Color Picker -->
+    <color name="md_red_500">#F44336</color>
+    <color name="md_red_300">#E57373</color>
+    <color name="md_green_500">#4CAF50</color>
+    <color name="md_green_300">#81C784</color>
+    <color name="md_blue_500">#2196F3</color>
+    <color name="md_blue_300">#64B5F6</color>
+</resources>

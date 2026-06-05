@@ -1,0 +1,103 @@
+<resources>
+    <string name="app_name">Snake Maze 2026</string>
+    <string name="title_name">SNAKE MAZE 2026</string>
+    <string name="high_score">High Score: %d</string>
+    <string name="score">Score: %d</string>
+    <string name="game_over">GAME OVER</string>
+    <string name="game_paused">PAUSED</string>
+    <string name="game_paused_title">Game Paused</string>
+    <string name="game_starting_in">Game starting in: %1$d</string>
+    <string name="ad_not_ready">Ad not ready yet. Please try again later.</string>
+    <string name="try_again">TRY AGAIN</string>
+    <string name="your_score">Your Score: %d</string>
+    <string name="next_theme">Next Theme</string>
+    <string name="random_theme">Random Theme</string>
+    <string name="total_food">Total Food: %d</string>
+    <string name="total_play_time">Total Play Time: %ds</string>
+    <string name="customize_theme">Customize</string>
+    <string name="career">Career</string>
+    <string name="share_score">Share Score</string>
+    <string name="share_text">I scored %d points in Snake Maze 2026! Can you beat me? 🐍🎮</string>
+
+    <!-- General Achievement -->
+    <string name="achievement_unlocked">Achievement Unlocked!</string>
+
+    <!-- Milestone Achievements -->
+    <string name="ach_egg_breaker">Eggshell Breaker</string>
+    <string name="ach_desc_egg_breaker">Score 50 points.</string>
+    <string name="ach_crawling_started">Crawling Started</string>
+    <string name="ach_desc_crawling_started">Score between 50 and 100 points.</string>
+    <string name="ach_fast_crawler">Fast Crawler</string>
+    <string name="ach_desc_fast_crawler">Score 100 points.</string>
+    <string name="ach_python_path">Path of the Python</string>
+    <string name="ach_desc_python_path">Score 250 points.</string>
+    <string name="ach_legendary_dragon">Legendary Dragon</string>
+    <string name="ach_desc_legendary_dragon">Score 500 points.</string>
+
+    <!-- Skill Achievements -->
+    <string name="ach_wall_phobia">Wall Phobia</string>
+    <string name="ach_desc_wall_phobia">Eat 30 food without touching the walls.</string>
+    <string name="ach_narrow_passer">Narrow Passer</string>
+    <string name="ach_desc_narrow_passer">Pass through maze blocks 5 times when snake length is greater than 20.</string>
+    <string name="ach_bonus_hunter">Bonus Hunter</string>
+    <string name="ach_desc_bonus_hunter">Catch 5 bonus foods in a single game.</string>
+    <string name="ach_light_speed">Light Speed</string>
+    <string name="ach_desc_light_speed">Eat 10 food at maximum speed.</string>
+    <string name="ach_survivor">Survivor</string>
+    <string name="ach_desc_survivor">Survive for 5 minutes without dying.</string>
+    <string name="ach_no_return">No Return</string>
+    <string name="ach_desc_no_return">Score 10 points using only one direction.</string>
+
+    <!-- Cumulative Achievements -->
+    <string name="ach_glutton">Glutton</string>
+    <string name="ach_desc_glutton">Eat a total of 1,000 food.</string>
+    <string name="ach_loyal_player">Loyal Player</string>
+    <string name="ach_desc_loyal_player">Start the game 100 times.</string>
+    <string name="ach_time_traveler">Time Traveler</string>
+    <string name="ach_desc_time_traveler">Exceed 1 hour of total play time.</string>
+    <string name="ach_fashion_icon">Fashion Icon</string>
+    <string name="ach_desc_fashion_icon">Use all preset themes at least once.</string>
+    <string name="ach_artist">The Artist</string>
+    <string name="ach_desc_artist">Create and play with your own custom theme.</string>
+
+    <!-- Hidden Achievements -->
+    <string name="ach_ouroboros">Ouroboros</string>
+    <string name="ach_desc_ouroboros">Die by crashing into your own tail when score is over 100.</string>
+    <string name="ach_so_close">So Close!</string>
+    <string name="ach_desc_so_close">Die when you are just 1 point away from your high score.</string>
+    <string name="ach_fast_and_furious">Fast &amp; Furious</string>
+    <string name="ach_desc_fast_and_furious">Die by crashing into an obstacle within the first 5 seconds.</string>
+
+    <!-- Dynamic Ranks -->
+    <string name="rank_worm">Worm</string>
+    <string name="rank_rookie_snake">Rookie Snake</string>
+    <string name="rank_rattler">Rattler</string>
+    <string name="rank_maze_master">Maze Master</string>
+    <string name="rank_cobra_king">Cobra King</string>
+    <string name="rank_lord_of_serpents">Lord of Serpents</string>
+    <string name="rank_mythical_leviathan">Mythical Leviathan</string>
+    <string name="rank_label">Rank: %s</string>
+
+    <string name="career_title">Career</string>
+    <string name="settings_title">Settings</string>
+    <string name="new_game">NEW GAME</string>
+    <string name="resume_game">RESUME</string>
+    <string name="settings">SETTINGS</string>
+    <string name="version_label">Version: %s</string>
+    <string name="watch_ads">WATCH ADS</string>
+    <string name="support_developer">(Watch ads to support the developer)</string>
+    <string name="thank_you_for_support">Thanks for your support! ❤️</string>
+    
+    <string name="main_menu">MAIN MENU</string>
+
+    <string name="settings_set_head_color">Set Snake Head Color</string>
+    <string name="settings_set_body_color">Set Snake Body Color</string>
+    <string name="settings_set_food_color">Set Food Color</string>
+    <string name="settings_set_map_color">Set Map Color</string>
+    <string name="settings_random_color">Random Color</string>
+    <string name="sound_settings">Sound Settings</string>
+    <string name="control_mode_label">Conrol Mod</string>
+    <string name="control_mode_classic">Classic (Zik-zak)</string>
+    <string name="control_mode_dpad">D-Pad (Full Control)</string>
+    <string name="control_mode_swipe">Swipe</string>
+</resources>

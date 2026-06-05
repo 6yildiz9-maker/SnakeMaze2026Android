@@ -1,0 +1,108 @@
+<resources>
+    <string name="app_name">Snake Maze 2026</string>
+    <string name="title_name">YILAN DOLAMBACI 2026</string>
+    <string name="high_score">En Yüksek Skor: %d</string>
+    <string name="score">Skor: %d</string>
+    <string name="game_over">OYUN BİTTİ</string>
+    <string name="game_paused">DURDURULDU</string>
+    <string name="game_paused_title">Oyun Durduruldu</string>
+    <string name="game_starting_in">Oyun başlıyor: %1$d</string>
+    <string name="ad_not_ready">Reklam henüz hazır değil. Lütfen sonra tekrar deneyin.</string>
+    <string name="try_again">TEKRAR DENE</string>
+    <string name="your_score">Skorunuz: %d</string>
+    <string name="next_theme">Sonraki Tema</string>
+    <string name="random_theme">Rastgele Tema</string>
+    <string name="total_food">Toplam Yemek: %d</string>
+    <string name="total_play_time">Toplam Oyun Süresi: %ds</string>
+    <string name="customize_theme">Özelleştir</string>
+    <string name="career">Kariyer</string>
+    <string name="share_score">Skoru Paylaş</string>
+    <string name="share_text">Snake Maze 2026\'da %d puan yaptım! Beni geçebilir misin? 🐍🎮</string>
+
+    <!-- General Achievement -->
+    <string name="achievement_unlocked">Başarım Açıldı!</string>
+
+    <!-- Milestone Achievements -->
+    <string name="ach_egg_breaker">Yumurta Kırıcı</string>
+    <string name="ach_desc_egg_breaker">50 puan yap.</string>
+    <string name="ach_crawling_started">Sürünme Başladı</string>
+    <string name="ach_desc_crawling_started">50 ile 100 puan arası skor yap.</string>
+    <string name="ach_fast_crawler">Hızlı Sürünen</string>
+    <string name="ach_desc_fast_crawler">100 puan yap.</string>
+    <string name="ach_python_path">Piton Yolu</string>
+    <string name="ach_desc_python_path">250 puan yap.</string>
+    <string name="ach_legendary_dragon">Efsanevi Ejderha</string>
+    <string name="ach_desc_legendary_dragon">500 puan yap.</string>
+
+    <!-- Skill Achievements -->
+    <string name="ach_wall_phobia">Duvar Fobisi</string>
+    <string name="ach_desc_wall_phobia">Duvarlara değmeden 30 yemek ye.</string>
+    <string name="ach_narrow_passer">Dar Geçit Ustası</string>
+    <string name="ach_desc_narrow_passer">Yılan uzunluğu 20\'den fazlayken labirent bloklarından 5 kez geç.</string>
+    <string name="ach_bonus_hunter">Bonus Avcısı</string>
+    <string name="ach_desc_bonus_hunter">Tek bir oyunda 5 bonus yemek ye.</string>
+    <string name="ach_light_speed">Işık Hızı</string>
+    <string name="ach_desc_light_speed">Maksimum hızda 10 yemek ye.</string>
+    <string name="ach_survivor">Hayatta Kalan</string>
+    <string name="ach_desc_survivor">Ölmeden 5 dakika hayatta kal.</string>
+    <string name="ach_no_return">Geri Dönüş Yok</string>
+    <string name="ach_desc_no_return">Sadece tek bir yön kullanarak 10 puan yap.</string>
+
+    <!-- Cumulative Achievements -->
+    <string name="ach_glutton">Obur</string>
+    <string name="ach_desc_glutton">Toplamda 1,000 yemek ye.</string>
+    <string name="ach_loyal_player">Sadık Oyuncu</string>
+    <string name="ach_desc_loyal_player">Oyunu 100 kez başlat.</string>
+    <string name="ach_time_traveler">Zaman Yolcusu</string>
+    <string name="ach_desc_time_traveler">Toplam oyun süresinde 1 saati aş.</string>
+    <string name="ach_fashion_icon">Moda İkonu</string>
+    <string name="ach_desc_fashion_icon">Tüm hazır temaları en az bir kez kullan.</string>
+    <string name="ach_artist">Sanatçı</string>
+    <string name="ach_desc_artist">Kendi özel temanı oluştur ve onunla oyna.</string>
+
+    <!-- Hidden Achievements -->
+    <string name="ach_ouroboros">Ouroboros</string>
+    <string name="ach_desc_ouroboros">Skor 100\'den fazlayken kendi kuyruğuna çarparak öl.</string>
+    <string name="ach_so_close">Çok Yakındı!</string>
+    <string name="ach_desc_so_close">En yüksek skoruna sadece 1 puan kala öl.</string>
+    <string name="ach_fast_and_furious">Hızlı ve Öfkeli</string>
+    <string name="ach_desc_fast_and_furious">İlk 5 saniye içinde bir engele çarparak öl.</string>
+
+    <!-- Dynamic Ranks -->
+    <string name="rank_worm">Solucan</string>
+    <string name="rank_rookie_snake">Çaylak Yılan</string>
+    <string name="rank_rattler">Çıngıraklı Yılan</string>
+    <string name="rank_maze_master">Labirent Ustası</string>
+    <string name="rank_cobra_king">Kral Kobra</string>
+    <string name="rank_lord_of_serpents">Yılanlar Efendisi</string>
+    <string name="rank_mythical_leviathan">Mistik Leviathan</string>
+    <string name="rank_label">Rütbe: %s</string>
+
+    <string name="career_title">Kariyer</string>
+    <string name="settings_title">Ayarlar</string>
+    <string name="new_game">YENİ OYUN</string>
+    <string name="resume_game">DEVAM ET</string>
+    <string name="settings">AYARLAR</string>
+    <string name="version_label">Versiyon: %s</string>
+    <string name="watch_ads">REKLAM İZLE</string>
+    <string name="support_developer">(Geliştiriciye destek için reklam izleyin)</string>
+    <string name="thank_you_for_support">Desteğiniz için teşekkürler! ❤️</string>
+    
+    <string name="main_menu">ANA MENÜ</string>
+    
+    <string name="settings_set_head_color">Yılan Başı Rengi</string>
+    <string name="settings_set_body_color">Yılan Gövde Rengi</string>
+    <string name="settings_set_food_color">Yemek Rengi</string>
+    <string name="settings_set_map_color">Harita Rengi</string>
+    <string name="settings_random_color">Rastgele Renkler</string>
+    <string name="sound_settings">Ses Ayarları</string>
+    <string name="control_mode_label">Kontrol Modu</string>
+    <string name="control_mode_classic">Klasik (Zik-zak)</string>
+    <string name="control_mode_dpad">D-Pad (Tam Kontrol)</string>
+    <string name="control_mode_swipe">Kaydırma</string>
+
+    <string name="turn_left">Sola Dön</string>
+    <string name="turn_right">Sağa Dön</string>
+    <string name="turn_up">Yukarı</string>
+    <string name="turn_down">Aşağı</string>
+</resources>

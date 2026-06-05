@@ -1,0 +1,11 @@
+
+<ad-services-config>
+    <dev-options>
+        <dev-keys>
+            <dev-key>
+                <id-or-hash>33BE2250B43518CCDA7DE426D04EE231</id-or-hash>
+                <type>TEST_DEVICE_HASH</type>
+            </dev-key>
+        </dev-keys>
+    </dev-options>
+</ad-services-config>
