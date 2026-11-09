@@ -1,6 +1,7 @@
 import { Achievement, GameData, Language } from '../types.ts';
 import { AchievementThresholds, RankThresholds } from '../constants/gameConstants.ts';
 import { t } from './translations.ts';
+import { achievementStorageKey, storage } from './storage.ts';
 
 export interface AchievementItem {
   id: string;
@@ -39,15 +40,13 @@ export const ALL_ACHIEVEMENTS: AchievementItem[] = [
 ];
 
 export class AchievementsManager {
-  private prefix = 'achievement_';
-
   public isUnlocked(id: string): boolean {
-    return localStorage.getItem(`${this.prefix}${id}`) === 'true';
+    return storage.getItem(achievementStorageKey(id)) === 'true';
   }
 
   public unlock(id: string, onUnlock?: (ach: AchievementItem) => void): boolean {
     if (!this.isUnlocked(id)) {
-      localStorage.setItem(`${this.prefix}${id}`, 'true');
+      storage.setItem(achievementStorageKey(id), 'true');
       const found = ALL_ACHIEVEMENTS.find((a) => a.id === id);
       if (found && onUnlock) {
         onUnlock(found);
@@ -67,25 +66,7 @@ export class AchievementsManager {
   }
 
   public checkAchievements(gameData: GameData, onUnlock?: (ach: AchievementItem) => void) {
-    // Milestones
-    if (
-      gameData.score >= AchievementThresholds.CRAWLING_SCORE_MIN &&
-      gameData.score <= AchievementThresholds.CRAWLING_SCORE_MAX
-    ) {
-      this.unlock('crawling_started', onUnlock);
-    }
-    if (gameData.score >= AchievementThresholds.EGG_BREAKER_SCORE) {
-      this.unlock('egg_breaker', onUnlock);
-    }
-    if (gameData.score >= AchievementThresholds.FAST_CRAWLER_SCORE) {
-      this.unlock('fast_crawler', onUnlock);
-    }
-    if (gameData.score >= AchievementThresholds.PYTHON_PATH_SCORE) {
-      this.unlock('python_path', onUnlock);
-    }
-    if (gameData.score >= AchievementThresholds.LEGENDARY_DRAGON_SCORE) {
-      this.unlock('legendary_dragon', onUnlock);
-    }
+    this.checkScoreAchievements(gameData.score, onUnlock);
 
     // Skill
     if (gameData.foodEatenWithoutWall >= AchievementThresholds.WALL_PHOBIA_FOOD) {
@@ -133,6 +114,27 @@ export class AchievementsManager {
     }
     if (gameData.diedFast) {
       this.unlock('fast_and_furious', onUnlock);
+    }
+  }
+
+  public checkScoreAchievements(score: number, onUnlock?: (ach: AchievementItem) => void) {
+    if (
+      score >= AchievementThresholds.CRAWLING_SCORE_MIN &&
+      score <= AchievementThresholds.CRAWLING_SCORE_MAX
+    ) {
+      this.unlock('crawling_started', onUnlock);
+    }
+    if (score >= AchievementThresholds.EGG_BREAKER_SCORE) {
+      this.unlock('egg_breaker', onUnlock);
+    }
+    if (score >= AchievementThresholds.FAST_CRAWLER_SCORE) {
+      this.unlock('fast_crawler', onUnlock);
+    }
+    if (score >= AchievementThresholds.PYTHON_PATH_SCORE) {
+      this.unlock('python_path', onUnlock);
+    }
+    if (score >= AchievementThresholds.LEGENDARY_DRAGON_SCORE) {
+      this.unlock('legendary_dragon', onUnlock);
     }
   }
 

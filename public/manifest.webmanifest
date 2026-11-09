@@ -1,0 +1,31 @@
+{
+  "name": "Snake Maze 2026",
+  "short_name": "Snake Maze",
+  "description": "A retro snake maze game.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#C7F0D8",
+  "background_color": "#C7F0D8",
+  "icons": [
+    {
+      "src": "./icons/snake-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/snake-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/snake.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
