@@ -3,7 +3,11 @@ import { Language } from '../types.ts';
 import { achievementsManager, ALL_ACHIEVEMENTS } from '../utils/achievementsManager.ts';
 import { t } from '../utils/translations.ts';
 import { soundManager } from '../utils/soundManager.ts';
-import { Trophy, Lock, CheckCircle2, X } from 'lucide-react';
+import { formatDuration } from '../utils/formatDuration.ts';
+import { useDialogAccessibility } from '../hooks/useDialogAccessibility.ts';
+import { Trophy, X } from 'lucide-react';
+import { RankProgress } from './RankProgress.tsx';
+import { AchievementIcon } from './AchievementIcon.tsx';
 
 interface CareerModalProps {
   isOpen: boolean;
@@ -22,6 +26,7 @@ export const CareerModal: React.FC<CareerModalProps> = ({
   totalFood,
   totalPlayTime,
 }) => {
+  const dialogRef = useDialogAccessibility(isOpen, onClose);
   if (!isOpen) return null;
 
   const currentRank = achievementsManager.getRank(highScore, lang);
@@ -29,12 +34,12 @@ export const CareerModal: React.FC<CareerModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="relative w-full max-w-lg bg-[#C7F0D8] text-[#3A3F44] border-4 border-[#3A3F44] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="career-dialog-title" tabIndex={-1} className="relative w-full max-w-lg bg-[#C7F0D8] text-[#3A3F44] border-4 border-[#3A3F44] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[#3A3F44]/20 bg-[#B5E2C8]">
           <div className="flex items-center gap-2">
             <Trophy className="w-6 h-6 text-[#3A3F44]" />
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-wider font-mono-retro">
+            <h2 id="career-dialog-title" className="text-xl sm:text-2xl font-extrabold tracking-wider font-mono-retro">
               {t(lang, 'career_title')}
             </h2>
           </div>
@@ -57,6 +62,9 @@ export const CareerModal: React.FC<CareerModalProps> = ({
             <div className="text-[11px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
               {lang === 'tr' ? 'EN YÜKSEK' : 'HIGH SCORE'}
             </div>
+            <div className="px-6 pt-4">
+              <RankProgress score={highScore} lang={lang} />
+            </div>
             <div className="text-2xl font-black font-mono-retro text-[#1E2328]">
               {highScore}
             </div>
@@ -73,10 +81,10 @@ export const CareerModal: React.FC<CareerModalProps> = ({
 
           <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
             <div className="text-[11px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
-              {lang === 'tr' ? 'SÜRE' : 'PLAY TIME'}
+              {t(lang, 'play_time')}
             </div>
             <div className="text-2xl font-black font-mono-retro text-[#1E2328]">
-              {totalPlayTime}s
+              {formatDuration(totalPlayTime, lang)}
             </div>
           </div>
 
@@ -111,13 +119,7 @@ export const CareerModal: React.FC<CareerModalProps> = ({
                     : 'bg-[#2B2E33] border-black/40 text-[#9E9E9E]'
                 }`}
               >
-                <div className="mt-0.5">
-                  {isUnlocked ? (
-                    <CheckCircle2 className="w-5 h-5 text-[#2E7D32]" />
-                  ) : (
-                    <Lock className="w-5 h-5 text-[#757575]" />
-                  )}
-                </div>
+                <AchievementIcon achievementId={item.id} isUnlocked={isUnlocked} />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span

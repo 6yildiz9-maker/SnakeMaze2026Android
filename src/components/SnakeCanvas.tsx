@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Direction, Point, ThemeColors } from '../types.ts';
 
 interface SnakeCanvasProps {
@@ -12,6 +12,10 @@ interface SnakeCanvasProps {
   colors: ThemeColors;
   isPreview?: boolean;
   className?: string;
+  smoothMotion?: boolean;
+  gameSpeed?: number;
+  rankDecorationsEnabled?: boolean;
+  rankDecoration?: string;
 }
 
 export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
@@ -25,8 +29,22 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
   colors,
   isPreview = false,
   className = '',
+  smoothMotion = false,
+  gameSpeed = 300,
+  rankDecorationsEnabled = false,
+  rankDecoration = '',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const previousSnakeRef = useRef(snake);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setPrefersReducedMotion(preference.matches);
+    updatePreference();
+    preference.addEventListener('change', updatePreference);
+    return () => preference.removeEventListener('change', updatePreference);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -35,8 +53,17 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    const previousSnake = previousSnakeRef.current;
+    previousSnakeRef.current = snake;
+    const animationStart = performance.now();
+    let animationFrame = 0;
+    const draw = (progress = 1) => {
+    const width = canvas.clientWidth;
+    const height = canvas.clientHeight;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const cellSize = width / gridSize;
 
     // Clear background
@@ -160,7 +187,22 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
     }
 
     // 3. Draw snake segments
-    snake.forEach(([sx, sy], index) => {
+    snake.forEach(([rawX, rawY], index) => {
+      let sx = rawX;
+      let sy = rawY;
+      const previous = index === 0 ? previousSnake[0] : previousSnake[index - 1];
+      if (smoothMotion && previous) {
+        let dx = rawX - previous[0];
+        let dy = rawY - previous[1];
+        if (dx > gridSize / 2) dx -= gridSize;
+        if (dx < -gridSize / 2) dx += gridSize;
+        if (dy > gridHeight / 2) dy -= gridHeight;
+        if (dy < -gridHeight / 2) dy += gridHeight;
+        if (Math.abs(dx) + Math.abs(dy) <= 1) {
+          sx = ((previous[0] + dx * progress) % gridSize + gridSize) % gridSize;
+          sy = ((previous[1] + dy * progress) % gridHeight + gridHeight) % gridHeight;
+        }
+      }
       const isHead = index === 0;
       const segmentColor = isHead ? colors.snakeHead : colors.snakeBody;
 
@@ -234,9 +276,52 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
           ctx.fillStyle = '#000000';
           ctx.fill();
         }
+
+        if (rankDecorationsEnabled && rankDecoration === 'rank_maze_master') {
+          ctx.fillStyle = '#D84343';
+          ctx.fillRect(sx * cellSize + 2, sy * cellSize + cellSize * 0.3, cellSize - 4, 3);
+          ctx.fillRect(sx * cellSize + cellSize * 0.72, sy * cellSize + cellSize * 0.38, 4, 3);
+        } else if (rankDecorationsEnabled && rankDecoration === 'rank_cobra_king') {
+          ctx.fillStyle = '#F2C94C';
+          ctx.fillRect(sx * cellSize + 3, sy * cellSize + 2, 4, 4);
+          ctx.fillRect(sx * cellSize + cellSize / 2 - 2, sy * cellSize + 1, 4, 6);
+          ctx.fillRect(sx * cellSize + cellSize - 7, sy * cellSize + 2, 4, 4);
+          ctx.fillRect(sx * cellSize + 3, sy * cellSize + 6, cellSize - 6, 2);
+        } else if (rankDecorationsEnabled && rankDecoration === 'rank_mythical_leviathan') {
+          ctx.fillStyle = '#FF6B35';
+          ctx.fillRect(sx * cellSize + 3, sy * cellSize + 2, 4, 5);
+          ctx.fillRect(sx * cellSize + cellSize / 2 - 2, sy * cellSize, 4, 7);
+          ctx.fillRect(sx * cellSize + cellSize - 7, sy * cellSize + 2, 4, 5);
+          ctx.fillStyle = '#FFD166';
+          ctx.fillRect(sx * cellSize + 4, sy * cellSize + 3, 2, 3);
+          ctx.fillRect(sx * cellSize + cellSize / 2 - 1, sy * cellSize + 2, 2, 3);
+          ctx.fillRect(sx * cellSize + cellSize - 6, sy * cellSize + 3, 2, 3);
+        }
       }
     });
-  }, [gridSize, gridHeight, snake, obstacles, food, bonusFood, direction, colors, isPreview]);
+    };
+
+    const animate = (now: number) => {
+      const progress = smoothMotion && !prefersReducedMotion
+        ? Math.min((now - animationStart) / gameSpeed, 1)
+        : 1;
+      draw(progress);
+      if (smoothMotion && !prefersReducedMotion && progress < 1) {
+        animationFrame = requestAnimationFrame(animate);
+      }
+    };
+    animationFrame = requestAnimationFrame(animate);
+    const resizeObserver = new ResizeObserver(() => draw(
+      smoothMotion && !prefersReducedMotion
+        ? Math.min((performance.now() - animationStart) / gameSpeed, 1)
+        : 1
+    ));
+    resizeObserver.observe(canvas);
+    return () => {
+      cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+    };
+  }, [gridSize, gridHeight, snake, obstacles, food, bonusFood, direction, colors, isPreview, smoothMotion, gameSpeed, rankDecorationsEnabled, rankDecoration, prefersReducedMotion]);
 
   return (
     <canvas
@@ -248,6 +333,7 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
         width: '100%',
         maxWidth: isPreview ? '200px' : '440px',
         aspectRatio: '1/1',
+        imageRendering: 'auto',
       }}
     />
   );

@@ -3,6 +3,8 @@ import { ControlMode, Language, ThemeColors } from '../types.ts';
 import { SnakeCanvas } from './SnakeCanvas.tsx';
 import { soundManager } from '../utils/soundManager.ts';
 import { t } from '../utils/translations.ts';
+import { useDialogAccessibility } from '../hooks/useDialogAccessibility.ts';
+import { STORAGE_KEYS, storage } from '../utils/storage.ts';
 import { PRESET_THEMES } from '../constants/gameConstants.ts';
 import { Volume2, VolumeX, Shuffle, X, Palette, Sliders } from 'lucide-react';
 
@@ -16,6 +18,14 @@ interface SettingsModalProps {
   onSelectControlMode: (mode: ControlMode) => void;
   colors: ThemeColors;
   onUpdateColors: (colors: ThemeColors) => void;
+  lcdEffectsEnabled: boolean;
+  onToggleLcdEffects: (enabled: boolean) => void;
+  smoothMotionEnabled: boolean;
+  onToggleSmoothMotion: (enabled: boolean) => void;
+  musicEnabled: boolean;
+  onToggleMusic: (enabled: boolean) => void;
+  rankDecorationsEnabled: boolean;
+  onToggleRankDecorations: (enabled: boolean) => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -28,7 +38,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onSelectControlMode,
   colors,
   onUpdateColors,
+  lcdEffectsEnabled,
+  onToggleLcdEffects,
+  smoothMotionEnabled,
+  onToggleSmoothMotion,
+  musicEnabled,
+  onToggleMusic,
+  rankDecorationsEnabled,
+  onToggleRankDecorations,
 }) => {
+  const dialogRef = useDialogAccessibility(isOpen, onClose);
   if (!isOpen) return null;
 
   const controlModesList: ControlMode[] = ['classic', 'alternative', 'swipe'];
@@ -55,7 +74,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       map: randomHex(),
     };
     onUpdateColors(newColors);
-    localStorage.setItem('used_custom_theme', 'true');
+    storage.setItem(STORAGE_KEYS.usedCustomTheme, 'true');
   };
 
   const handleApplyPreset = (theme: typeof PRESET_THEMES[0]) => {
@@ -67,12 +86,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       map: theme.map,
     });
     // track presets used
-    const used = JSON.parse(localStorage.getItem('used_preset_themes') || '[]');
+    const used = storage.getJson<string[]>(STORAGE_KEYS.usedPresetThemes, []);
     if (!used.includes(theme.id)) {
       used.push(theme.id);
-      localStorage.setItem('used_preset_themes', JSON.stringify(used));
+      storage.setItem(STORAGE_KEYS.usedPresetThemes, JSON.stringify(used));
       if (used.length >= PRESET_THEMES.length) {
-        localStorage.setItem('used_all_themes', 'true');
+        storage.setItem(STORAGE_KEYS.usedAllThemes, 'true');
       }
     }
   };
@@ -82,17 +101,17 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       ...colors,
       [key]: hex,
     });
-    localStorage.setItem('used_custom_theme', 'true');
+    storage.setItem(STORAGE_KEYS.usedCustomTheme, 'true');
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-      <div className="relative w-full max-w-lg bg-[#C7F0D8] text-[#3A3F44] border-4 border-[#3A3F44] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="settings-dialog-title" tabIndex={-1} className="relative w-full max-w-lg bg-[#C7F0D8] text-[#3A3F44] border-4 border-[#3A3F44] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90dvh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b-2 border-[#3A3F44]/20 bg-[#B5E2C8]">
           <div className="flex items-center gap-2">
             <Sliders className="w-6 h-6 text-[#3A3F44]" />
-            <h2 className="text-xl sm:text-2xl font-extrabold tracking-wider font-mono-retro">
+            <h2 id="settings-dialog-title" className="text-xl sm:text-2xl font-extrabold tracking-wider font-mono-retro">
               {t(lang, 'settings_title')}
             </h2>
           </div>
@@ -108,6 +127,44 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <X className="w-6 h-6 text-[#3A3F44]" />
           </button>
         </div>
+
+        <label className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 font-bold font-mono-retro">
+          <span>{t(lang, 'lcd_effects')}</span>
+          <input
+            type="checkbox"
+            checked={lcdEffectsEnabled}
+            onChange={(event) => onToggleLcdEffects(event.target.checked)}
+            aria-label={t(lang, 'lcd_effects')}
+          />
+        </label>
+
+        <label className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 font-bold font-mono-retro">
+          <span>{t(lang, 'smooth_motion')}</span>
+          <input
+            type="checkbox"
+            checked={smoothMotionEnabled}
+            onChange={(event) => onToggleSmoothMotion(event.target.checked)}
+            aria-label={t(lang, 'smooth_motion')}
+          />
+        </label>
+        <label className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 font-bold font-mono-retro">
+          <span>{t(lang, 'music_settings')}</span>
+          <input
+            type="checkbox"
+            checked={musicEnabled}
+            onChange={(event) => onToggleMusic(event.target.checked)}
+            aria-label={t(lang, 'music_settings')}
+          />
+        </label>
+        <label className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 font-bold font-mono-retro">
+          <span>{t(lang, 'rank_decorations')}</span>
+          <input
+            type="checkbox"
+            checked={rankDecorationsEnabled}
+            onChange={(event) => onToggleRankDecorations(event.target.checked)}
+            aria-label={t(lang, 'rank_decorations')}
+          />
+        </label>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
@@ -288,7 +345,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
           {/* Version */}
           <div className="text-center text-xs font-mono-retro opacity-70 italic">
-            {t(lang, 'version_label', { ver: '1.0.1' })}
+            {t(lang, 'version_label', { ver: __APP_VERSION__ })}
           </div>
         </div>
 

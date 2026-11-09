@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import { ControlMode, Direction, Language } from '../types.ts';
 import { soundManager } from '../utils/soundManager.ts';
 import { vibrate } from '../utils/haptics.ts';
@@ -27,8 +27,6 @@ export const Controls: React.FC<ControlsProps> = ({
   onZigZagRight,
   lang,
 }) => {
-  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
-
   const handleAction = (fn: () => void) => {
     soundManager.playButtonClick();
     vibrate(40);
@@ -85,42 +83,6 @@ export const Controls: React.FC<ControlsProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mode, onTurnUp, onTurnDown, onTurnLeft, onTurnRight, onZigZagLeft, onZigZagRight]);
-
-  // Touch Swipe handlers
-  const onTouchStart = (e: React.TouchEvent | React.MouseEvent) => {
-    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
-    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
-    touchStartRef.current = { x: clientX, y: clientY };
-  };
-
-  const onTouchEnd = (e: React.TouchEvent | React.MouseEvent) => {
-    if (!touchStartRef.current) return;
-    const clientX = 'changedTouches' in e ? e.changedTouches[0].clientX : e.clientX;
-    const clientY = 'changedTouches' in e ? e.changedTouches[0].clientY : e.clientY;
-
-    const diffX = clientX - touchStartRef.current.x;
-    const diffY = clientY - touchStartRef.current.y;
-    touchStartRef.current = null;
-
-    const minSwipe = 25;
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-      if (Math.abs(diffX) > minSwipe) {
-        if (diffX > 0) {
-          handleAction(onTurnRight);
-        } else {
-          handleAction(onTurnLeft);
-        }
-      }
-    } else {
-      if (Math.abs(diffY) > minSwipe) {
-        if (diffY > 0) {
-          handleAction(onTurnDown);
-        } else {
-          handleAction(onTurnUp);
-        }
-      }
-    }
-  };
 
   return (
     <div className="w-full flex justify-center items-center py-2 select-none">
@@ -200,11 +162,8 @@ export const Controls: React.FC<ControlsProps> = ({
 
       {mode === 'swipe' && (
         <div
-          onTouchStart={onTouchStart}
-          onTouchEnd={onTouchEnd}
-          onMouseDown={onTouchStart}
-          onMouseUp={onTouchEnd}
-          className="w-full max-w-sm h-36 border-2 border-dashed border-[#3A3F44]/40 rounded-xl bg-black/5 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing p-4 text-center transition-colors"
+          aria-hidden="true"
+          className="w-full max-w-sm h-36 border-2 border-dashed border-[#3A3F44]/40 rounded-xl bg-black/5 flex flex-col items-center justify-center p-4 text-center transition-colors"
         >
           <div className="grid grid-cols-3 gap-1 mb-2 opacity-60">
             <div />

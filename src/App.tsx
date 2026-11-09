@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import {
   Direction,
   Point,
@@ -12,44 +12,47 @@ import {
   GameLogic,
   DefaultColors,
 } from './constants/gameConstants.ts';
-import { SnakeCanvas } from './components/SnakeCanvas.tsx';
-import { Controls } from './components/Controls.tsx';
+import { MenuScreen } from './components/MenuScreen.tsx';
+import { GameScreen } from './components/GameScreen.tsx';
+import { PauseScreen } from './components/PauseScreen.tsx';
+import { GameOverScreen } from './components/GameOverScreen.tsx';
 import { CareerModal } from './components/CareerModal.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
-import { AdModal } from './components/AdModal.tsx';
 import { Toast, ToastMessage } from './components/Toast.tsx';
 import { soundManager } from './utils/soundManager.ts';
-import { achievementsManager } from './utils/achievementsManager.ts';
+import { achievementsManager, type AchievementItem } from './utils/achievementsManager.ts';
 import { vibrate } from './utils/haptics.ts';
 import { t } from './utils/translations.ts';
+import { STORAGE_KEYS, storage } from './utils/storage.ts';
+import { createInitialGameState, gameReducer } from './utils/gameReducer.ts';
+import { createRandomSeed, currentTimeMs } from './utils/time.ts';
 import confetti from 'canvas-confetti';
-import {
-  ArrowLeft,
-  Trophy,
-  Sliders,
-  Play,
-  RotateCcw,
-  Share2,
-  Tv,
-  Globe,
-  Home,
-} from 'lucide-react';
 
 type Screen = 'menu' | 'game' | 'pause' | 'game_over';
 
 export const App: React.FC = () => {
   // Localization & Settings
   const [lang, setLang] = useState<Language>(() => {
-    const saved = localStorage.getItem('My_Lang');
+    const saved = storage.getItem(STORAGE_KEYS.language);
     return (saved === 'en' || saved === 'tr') ? saved : 'en';
   });
 
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     return soundManager.getSoundEnabled();
   });
+  const [lcdEffectsEnabled, setLcdEffectsEnabled] = useState(
+    () => storage.getItem(STORAGE_KEYS.lcdEffectsEnabled) !== 'false'
+  );
+  const [smoothMotionEnabled, setSmoothMotionEnabled] = useState(
+    () => storage.getItem(STORAGE_KEYS.smoothMotionEnabled) === 'true'
+  );
+  const [musicEnabled, setMusicEnabled] = useState(() => soundManager.getMusicEnabled());
+  const [rankDecorationsEnabled, setRankDecorationsEnabled] = useState(
+    () => storage.getItem(STORAGE_KEYS.rankDecorationsEnabled) !== 'false'
+  );
 
   const [controlMode, setControlMode] = useState<ControlMode>(() => {
-    const saved = localStorage.getItem('control_preference');
+    const saved = storage.getItem(STORAGE_KEYS.controlMode);
     return saved === 'classic' || saved === 'alternative' || saved === 'swipe'
       ? saved
       : 'classic';
@@ -57,55 +60,60 @@ export const App: React.FC = () => {
 
   const [colors, setColors] = useState<ThemeColors>(() => {
     return {
-      snakeHead: localStorage.getItem('custom_snake_head_color') || DefaultColors.SNAKE_HEAD,
-      snakeBody: localStorage.getItem('custom_snake_body_color') || DefaultColors.SNAKE_BODY,
-      food: localStorage.getItem('custom_food_color') || DefaultColors.FOOD,
-      map: localStorage.getItem('custom_map_color') || DefaultColors.NOKIA_BG,
+      snakeHead: storage.getItem(STORAGE_KEYS.customSnakeHeadColor) || DefaultColors.SNAKE_HEAD,
+      snakeBody: storage.getItem(STORAGE_KEYS.customSnakeBodyColor) || DefaultColors.SNAKE_BODY,
+      food: storage.getItem(STORAGE_KEYS.customFoodColor) || DefaultColors.FOOD,
+      map: storage.getItem(STORAGE_KEYS.customMapColor) || DefaultColors.NOKIA_BG,
     };
   });
 
   // Modals
   const [isCareerOpen, setIsCareerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isAdOpen, setIsAdOpen] = useState(false);
-  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [toast, setToast] = useState<ToastMessage[]>([]);
+  const enqueueToast = useCallback((message: ToastMessage) => {
+    setToast((queue) => [...queue, message].slice(-3));
+  }, []);
+  const handleAchievementUnlocked = useCallback((unlockedAch: AchievementItem) => {
+    soundManager.playBonusEat();
+    enqueueToast({
+      id: unlockedAch.id,
+      type: 'achievement',
+      title: t(lang, 'achievement_unlocked'),
+      message: t(lang, unlockedAch.nameKey),
+    });
+  }, [enqueueToast, lang]);
 
   // Stats
   const [highScore, setHighScore] = useState<number>(() => {
-    return parseInt(localStorage.getItem('high_score') || '0', 10);
+    return storage.getNumber(STORAGE_KEYS.highScore, 0);
   });
   const [totalFood, setTotalFood] = useState<number>(() => {
-    return parseInt(localStorage.getItem('total_food') || '0', 10);
+    return storage.getNumber(STORAGE_KEYS.totalFood, 0);
   });
   const [totalPlayTime, setTotalPlayTime] = useState<number>(() => {
-    return parseInt(localStorage.getItem('total_play_time') || '0', 10);
+    return storage.getNumber(STORAGE_KEYS.totalPlayTime, 0);
   });
 
   // Screen
   const [screen, setScreen] = useState<Screen>('menu');
+  const [gameOutcome, setGameOutcome] = useState<'lost' | 'won'>('lost');
+  const [isNewHighScore, setIsNewHighScore] = useState(false);
 
   // Game Core State
   const gridSize = GameLogic.DEFAULT_GRID_SIZE;
   const gridHeight = GameLogic.DEFAULT_GRID_HEIGHT;
 
-  const [snake, setSnake] = useState<Point[]>([
-    [10, 10],
-    [10, 11],
-    [10, 12],
-  ]);
-  const [direction, setDirection] = useState<Direction>('UP');
-  const [food, setFood] = useState<Point>([10, 6]);
-  const [bonusFood, setBonusFood] = useState<Point | null>(null);
-  const [obstacles, setObstacles] = useState<Point[]>([]);
-  const [score, setScore] = useState<number>(0);
-  const [gameSpeed, setGameSpeed] = useState<number>(GameLogic.INITIAL_SPEED);
+  const [gameState, dispatch] = useReducer(gameReducer, undefined, createInitialGameState);
+  const { snake, direction, food, bonusFood, obstacles, score, gameSpeed } = gameState;
 
   // Countdown
   const [countdown, setCountdown] = useState<number | null>(null);
 
   // Session tracking
-  const directionQueueRef = useRef<Direction[]>([]);
   const bonusSpawnTimeRef = useRef<number>(0);
+  const bonusDeadlineRef = useRef<number>(0);
+  const bonusRemainingRef = useRef<number>(0);
   const bonusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const gameStartTimeRef = useRef<number>(0);
   const sessionFoodEatenRef = useRef<number>(0);
@@ -115,12 +123,13 @@ export const App: React.FC = () => {
   const bonusEatenFastRef = useRef<boolean>(false);
   const wallHitRef = useRef<boolean>(false);
   const mazePassesRef = useRef<number>(0);
-  const lastNarrowCellRef = useRef<Point | null>(null);
   const directionsUsedRef = useRef<Set<Direction>>(new Set(['UP']));
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const processedGameEventRef = useRef(0);
 
   // Check saved game presence
   const [hasSavedGame, setHasSavedGame] = useState<boolean>(() => {
-    return localStorage.getItem('saved_is_game_running') === 'true';
+    return storage.getItem(STORAGE_KEYS.savedGameRunning) === 'true';
   });
 
   // Handle language switch
@@ -128,7 +137,7 @@ export const App: React.FC = () => {
     soundManager.playButtonClick();
     const nextLang: Language = lang === 'en' ? 'tr' : 'en';
     setLang(nextLang);
-    localStorage.setItem('My_Lang', nextLang);
+    storage.setItem(STORAGE_KEYS.language, nextLang);
   };
 
   // Sound toggle
@@ -137,47 +146,49 @@ export const App: React.FC = () => {
     soundManager.setSoundEnabled(enabled);
   };
 
+  const handleToggleLcdEffects = (enabled: boolean) => {
+    setLcdEffectsEnabled(enabled);
+    storage.setItem(STORAGE_KEYS.lcdEffectsEnabled, String(enabled));
+  };
+
+  const handleToggleSmoothMotion = (enabled: boolean) => {
+    setSmoothMotionEnabled(enabled);
+    storage.setItem(STORAGE_KEYS.smoothMotionEnabled, String(enabled));
+  };
+
+  const handleToggleMusic = (enabled: boolean) => {
+    setMusicEnabled(enabled);
+    soundManager.setMusicEnabled(enabled);
+  };
+
+  const handleToggleRankDecorations = (enabled: boolean) => {
+    setRankDecorationsEnabled(enabled);
+    storage.setItem(STORAGE_KEYS.rankDecorationsEnabled, String(enabled));
+  };
+
   // Color updates
   const handleUpdateColors = (newColors: ThemeColors) => {
     setColors(newColors);
-    localStorage.setItem('custom_snake_head_color', newColors.snakeHead);
-    localStorage.setItem('custom_snake_body_color', newColors.snakeBody);
-    localStorage.setItem('custom_food_color', newColors.food);
-    localStorage.setItem('custom_map_color', newColors.map);
+    storage.setItem(STORAGE_KEYS.customSnakeHeadColor, newColors.snakeHead);
+    storage.setItem(STORAGE_KEYS.customSnakeBodyColor, newColors.snakeBody);
+    storage.setItem(STORAGE_KEYS.customFoodColor, newColors.food);
+    storage.setItem(STORAGE_KEYS.customMapColor, newColors.map);
   };
 
   // Control mode
   const handleSelectControlMode = (mode: ControlMode) => {
     setControlMode(mode);
-    localStorage.setItem('control_preference', mode);
-  };
-
-  // Helper: check if valid direction change (no 180 flip)
-  const isValidDirectionChange = (current: Direction, next: Direction): boolean => {
-    if (current === 'UP' && next === 'DOWN') return false;
-    if (current === 'DOWN' && next === 'UP') return false;
-    if (current === 'LEFT' && next === 'RIGHT') return false;
-    if (current === 'RIGHT' && next === 'LEFT') return false;
-    return true;
+    storage.setItem(STORAGE_KEYS.controlMode, mode);
   };
 
   // Queue direction change
   const queueDirection = useCallback((newDir: Direction) => {
     if (countdown !== null && countdown > 0) {
-      if (isValidDirectionChange(direction, newDir)) {
-        setDirection(newDir);
-        directionQueueRef.current = [];
-      }
+      setCountdown(null);
       return;
     }
-
-    if (directionQueueRef.current.length < 3) {
-      const lastDir = directionQueueRef.current[directionQueueRef.current.length - 1] || direction;
-      if (isValidDirectionChange(lastDir, newDir)) {
-        directionQueueRef.current.push(newDir);
-      }
-    }
-  }, [countdown, direction]);
+    dispatch({ type: 'QUEUE_DIRECTION', direction: newDir });
+  }, [countdown]);
 
   // Direction turn actions
   const turnUp = () => queueDirection('UP');
@@ -187,191 +198,104 @@ export const App: React.FC = () => {
 
   // Nokia 2-button zig-zag logic:
   const turnZigZagLeft = () => {
-    const pending = directionQueueRef.current[directionQueueRef.current.length - 1] || direction;
+    const pending = gameState.directionQueue[gameState.directionQueue.length - 1] || direction;
     const nextDir: Direction = pending === 'UP' || pending === 'DOWN' ? 'LEFT' : 'DOWN';
     queueDirection(nextDir);
   };
 
   const turnZigZagRight = () => {
-    const pending = directionQueueRef.current[directionQueueRef.current.length - 1] || direction;
+    const pending = gameState.directionQueue[gameState.directionQueue.length - 1] || direction;
     const nextDir: Direction = pending === 'UP' || pending === 'DOWN' ? 'RIGHT' : 'UP';
     queueDirection(nextDir);
   };
 
-  // Find all free cells on grid
-  const getFreeCells = (
-    currentSnake: Point[],
-    currentObstacles: Point[],
-    excludeList: (Point | null)[] = []
-  ): Point[] => {
-    const occupied = new Set<string>();
-    currentSnake.forEach(([x, y]) => occupied.add(`${x},${y}`));
-    currentObstacles.forEach(([x, y]) => occupied.add(`${x},${y}`));
-    excludeList.forEach((p) => {
-      if (p) occupied.add(`${p[0]},${p[1]}`);
-    });
-
-    const free: Point[] = [];
-    for (let x = 0; x < gridSize; x++) {
-      for (let y = 0; y < gridHeight; y++) {
-        if (!occupied.has(`${x},${y}`)) {
-          free.push([x, y]);
-        }
-      }
-    }
-    return free;
-  };
-
-  // Spawn regular food
-  const spawnFood = (
-    currentSnake: Point[],
-    currentObstacles: Point[],
-    currBonusFood: Point | null
-  ): Point | null => {
-    const free = getFreeCells(currentSnake, currentObstacles, [currBonusFood]);
-    if (free.length === 0) return null;
-    const idx = Math.floor(Math.random() * free.length);
-    return free[idx];
-  };
-
-  // Spawn bonus food
-  const triggerSpawnBonusFood = (
-    currentSnake: Point[],
-    currentObstacles: Point[],
-    currFood: Point
-  ) => {
-    if (bonusTimeoutRef.current) {
-      clearTimeout(bonusTimeoutRef.current);
-    }
-    const free = getFreeCells(currentSnake, currentObstacles, [currFood]);
-    if (free.length === 0) return;
-    const idx = Math.floor(Math.random() * free.length);
-    const bonus = free[idx];
-    setBonusFood(bonus);
-    bonusSpawnTimeRef.current = Date.now();
-
-    // Hide after timeout
-    bonusTimeoutRef.current = setTimeout(() => {
-      setBonusFood(null);
-    }, GameLogic.BONUS_FOOD_DISPLAY_TIMEOUT_MS);
-  };
-
-  // Spawn 2x2 maze obstacle block
-  const tryAddObstacle = (
-    currentObstacles: Point[],
-    currentSnake: Point[],
-    currFood: Point,
-    currBonus: Point | null
-  ): Point[] => {
-    let attempts = 0;
-    while (attempts < 80) {
-      const startX = Math.floor(Math.random() * (gridSize - 4)) + 2;
-      const startY = Math.floor(Math.random() * (gridHeight - 4)) + 2;
-
-      let isClear = true;
-      for (let i = 0; i <= 1; i++) {
-        for (let j = 0; j <= 1; j++) {
-          const cx = startX + i;
-          const cy = startY + j;
-          if (
-            currentSnake.some(([sx, sy]) => sx === cx && sy === cy) ||
-            (currFood[0] === cx && currFood[1] === cy) ||
-            (currBonus && currBonus[0] === cx && currBonus[1] === cy) ||
-            currentObstacles.some(([ox, oy]) => ox === cx && oy === cy)
-          ) {
-            isClear = false;
-            break;
-          }
-        }
-        if (!isClear) break;
-      }
-
-      if (isClear) {
-        const newObs = [...currentObstacles];
-        for (let i = 0; i <= 1; i++) {
-          for (let j = 0; j <= 1; j++) {
-            newObs.push([startX + i, startY + j]);
-          }
-        }
-        return newObs;
-      }
-      attempts++;
-    }
-    return currentObstacles;
-  };
-
-  // Narrow pass check
-  const isNarrowPass = (cell: Point, currentObstacles: Point[]): boolean => {
-    const isBlocked = (cx: number, cy: number) => {
-      if (cx < 0 || cx >= gridSize || cy < 0 || cy >= gridHeight) return true;
-      return currentObstacles.some(([ox, oy]) => ox === cx && oy === cy);
-    };
-
-    const left = isBlocked(cell[0] - 1, cell[1]);
-    const right = isBlocked(cell[0] + 1, cell[1]);
-    const up = isBlocked(cell[0], cell[1] - 1);
-    const down = isBlocked(cell[0], cell[1] + 1);
-
-    return (left && right) || (up && down);
-  };
-
   // Clear saved game
-  const clearSavedGame = () => {
-    localStorage.removeItem('saved_snake_body');
-    localStorage.removeItem('saved_obstacles');
-    localStorage.removeItem('saved_direction');
-    localStorage.removeItem('saved_food_x');
-    localStorage.removeItem('saved_food_y');
-    localStorage.removeItem('saved_score');
-    localStorage.removeItem('saved_game_speed');
-    localStorage.removeItem('saved_bonus_food_x');
-    localStorage.removeItem('saved_bonus_food_y');
-    localStorage.removeItem('saved_is_game_running');
+  const clearSavedGame = useCallback(() => {
+    Object.values(STORAGE_KEYS)
+      .filter((key) => key.startsWith('saved_'))
+      .forEach((key) => storage.removeItem(key));
     setHasSavedGame(false);
-  };
+  }, []);
 
   // Save current game state
-  const saveGameState = () => {
-    localStorage.setItem(
-      'saved_snake_body',
-      snake.map(([x, y]) => `${x},${y}`).join(';')
+  const saveGameState = useCallback(({
+    snake: savedSnake = snake,
+    obstacles: savedObstacles = obstacles,
+    direction: savedDirection = direction,
+    food: savedFood = food,
+    bonusFood: savedBonusFood = bonusFood,
+    score: savedScore = score,
+    gameSpeed: savedGameSpeed = gameSpeed,
+  }: {
+    snake?: Point[];
+    obstacles?: Point[];
+    direction?: Direction;
+    food?: Point;
+    bonusFood?: Point | null;
+    score?: number;
+    gameSpeed?: number;
+  } = {}) => {
+    storage.setItem(
+      STORAGE_KEYS.savedSnake,
+      savedSnake.map(([x, y]) => `${x},${y}`).join(';')
     );
-    localStorage.setItem(
-      'saved_obstacles',
-      obstacles.map(([x, y]) => `${x},${y}`).join(';')
+    storage.setItem(
+      STORAGE_KEYS.savedObstacles,
+      savedObstacles.map(([x, y]) => `${x},${y}`).join(';')
     );
-    localStorage.setItem('saved_direction', direction);
-    localStorage.setItem('saved_food_x', String(food[0]));
-    localStorage.setItem('saved_food_y', String(food[1]));
-    localStorage.setItem('saved_score', String(score));
-    localStorage.setItem('saved_game_speed', String(gameSpeed));
-    localStorage.setItem('saved_is_game_running', 'true');
+    storage.setItem(STORAGE_KEYS.savedDirection, savedDirection);
+    storage.setItem(STORAGE_KEYS.savedFoodX, String(savedFood[0]));
+    storage.setItem(STORAGE_KEYS.savedFoodY, String(savedFood[1]));
+    storage.setItem(STORAGE_KEYS.savedScore, String(savedScore));
+    storage.setItem(STORAGE_KEYS.savedGameSpeed, String(savedGameSpeed));
+    storage.setItem(STORAGE_KEYS.savedVersion, '1');
+    storage.setItem(STORAGE_KEYS.savedGameRunning, 'true');
 
-    if (bonusFood) {
-      localStorage.setItem('saved_bonus_food_x', String(bonusFood[0]));
-      localStorage.setItem('saved_bonus_food_y', String(bonusFood[1]));
+    if (savedBonusFood) {
+      storage.setItem(STORAGE_KEYS.savedBonusFoodX, String(savedBonusFood[0]));
+      storage.setItem(STORAGE_KEYS.savedBonusFoodY, String(savedBonusFood[1]));
+      storage.setItem(STORAGE_KEYS.savedBonusFoodRemaining, String(bonusRemainingRef.current));
     } else {
-      localStorage.removeItem('saved_bonus_food_x');
-      localStorage.removeItem('saved_bonus_food_y');
+      storage.removeItem(STORAGE_KEYS.savedBonusFoodX);
+      storage.removeItem(STORAGE_KEYS.savedBonusFoodY);
+      storage.removeItem(STORAGE_KEYS.savedBonusFoodRemaining);
     }
-    setHasSavedGame(true);
-  };
+  }, [snake, obstacles, direction, food, bonusFood, score, gameSpeed]);
 
   // Restore saved game
   const restoreGameState = (): boolean => {
     try {
-      const isRunning = localStorage.getItem('saved_is_game_running');
+      const isRunning = storage.getItem(STORAGE_KEYS.savedGameRunning);
       if (isRunning !== 'true') return false;
+      const savedVersion = storage.getItem(STORAGE_KEYS.savedVersion);
+      if (savedVersion !== null && savedVersion !== '1') {
+        clearSavedGame();
+        return false;
+      }
 
-      const snakeStr = localStorage.getItem('saved_snake_body');
-      if (!snakeStr) return false;
+      const snakeStr = storage.getItem(STORAGE_KEYS.savedSnake);
+      if (!snakeStr) {
+        clearSavedGame();
+        return false;
+      }
+      const requiredKeys = [
+        STORAGE_KEYS.savedDirection,
+        STORAGE_KEYS.savedFoodX,
+        STORAGE_KEYS.savedFoodY,
+        STORAGE_KEYS.savedScore,
+        STORAGE_KEYS.savedGameSpeed,
+      ];
+      if (requiredKeys.some((key) => storage.getItem(key) === null)) {
+        clearSavedGame();
+        return false;
+      }
 
       const restoredSnake: Point[] = snakeStr.split(';').map((s) => {
         const [x, y] = s.split(',').map(Number);
         return [x, y];
       });
 
-      const obsStr = localStorage.getItem('saved_obstacles') || '';
+      const obsStr = storage.getItem(STORAGE_KEYS.savedObstacles) || '';
       const restoredObs: Point[] = obsStr
         ? obsStr.split(';').map((s) => {
             const [x, y] = s.split(',').map(Number);
@@ -379,32 +303,80 @@ export const App: React.FC = () => {
           })
         : [];
 
-      const savedDir = (localStorage.getItem('saved_direction') || 'UP') as Direction;
-      const foodX = parseInt(localStorage.getItem('saved_food_x') || '0', 10);
-      const foodY = parseInt(localStorage.getItem('saved_food_y') || '0', 10);
-      const savedScore = parseInt(localStorage.getItem('saved_score') || '0', 10);
-      const savedSpeed = parseInt(
-        localStorage.getItem('saved_game_speed') || String(GameLogic.INITIAL_SPEED),
-        10
+      const savedDir = (storage.getItem(STORAGE_KEYS.savedDirection) || 'UP') as Direction;
+      const foodX = Number(storage.getItem(STORAGE_KEYS.savedFoodX));
+      const foodY = Number(storage.getItem(STORAGE_KEYS.savedFoodY));
+      const savedScore = Number(storage.getItem(STORAGE_KEYS.savedScore));
+      const savedSpeed = Number(
+        storage.getItem(STORAGE_KEYS.savedGameSpeed) || String(GameLogic.INITIAL_SPEED),
       );
 
-      let savedBonus: Point | null = null;
-      if (localStorage.getItem('saved_bonus_food_x')) {
-        const bx = parseInt(localStorage.getItem('saved_bonus_food_x') || '0', 10);
-        const by = parseInt(localStorage.getItem('saved_bonus_food_y') || '0', 10);
-        savedBonus = [bx, by];
+      const validPoint = ([x, y]: Point) =>
+        Number.isInteger(x) &&
+        Number.isInteger(y) &&
+        x >= 0 &&
+        x < gridSize &&
+        y >= 0 &&
+        y < gridHeight;
+      if (
+        restoredSnake.length === 0 ||
+        restoredSnake.some((point) => !validPoint(point)) ||
+        restoredObs.some((point) => !validPoint(point)) ||
+        !['UP', 'DOWN', 'LEFT', 'RIGHT'].includes(savedDir) ||
+        !Number.isInteger(foodX) ||
+        !Number.isInteger(foodY) ||
+        !validPoint([foodX, foodY]) ||
+        !Number.isFinite(savedScore) ||
+        savedScore < 0 ||
+        !Number.isFinite(savedSpeed) ||
+        savedSpeed < GameLogic.MIN_SPEED ||
+        savedSpeed > GameLogic.INITIAL_SPEED
+      ) {
+        clearSavedGame();
+        return false;
       }
 
-      setSnake(restoredSnake);
-      setObstacles(restoredObs);
-      setDirection(savedDir);
-      setFood([foodX, foodY]);
-      setBonusFood(savedBonus);
-      setScore(savedScore);
-      setGameSpeed(savedSpeed);
+      let savedBonus: Point | null = null;
+      if (storage.getItem(STORAGE_KEYS.savedBonusFoodX)) {
+        if (storage.getItem(STORAGE_KEYS.savedBonusFoodY) === null) {
+          clearSavedGame();
+          return false;
+        }
+        const bx = Number(storage.getItem(STORAGE_KEYS.savedBonusFoodX));
+        const by = Number(storage.getItem(STORAGE_KEYS.savedBonusFoodY));
+        const remaining = Number(
+          storage.getItem(STORAGE_KEYS.savedBonusFoodRemaining) ||
+            GameLogic.BONUS_FOOD_DISPLAY_TIMEOUT_MS
+        );
+        if (!validPoint([bx, by]) || !Number.isFinite(remaining)) {
+          clearSavedGame();
+          return false;
+        }
+        savedBonus = [bx, by];
+        bonusRemainingRef.current = Math.max(
+          0,
+          Math.min(GameLogic.BONUS_FOOD_DISPLAY_TIMEOUT_MS, remaining)
+        );
+      }
+
+      dispatch({
+        type: 'RESTORE',
+        state: {
+          ...createInitialGameState(),
+          snake: restoredSnake,
+          obstacles: restoredObs,
+          direction: savedDir,
+          food: [foodX, foodY],
+          bonusFood: savedBonus,
+          score: savedScore,
+          gameSpeed: savedSpeed,
+        },
+      });
 
       return true;
-    } catch {
+    } catch (error) {
+      console.warn('Unable to restore saved game:', error);
+      clearSavedGame();
       return false;
     }
   };
@@ -413,9 +385,17 @@ export const App: React.FC = () => {
   const startNewGame = () => {
     soundManager.playButtonClick();
     clearSavedGame();
+    if (!musicEnabled && !storage.getItem(STORAGE_KEYS.musicHintShown)) {
+      enqueueToast({
+        id: 'music_hint',
+        type: 'info',
+        message: t(lang, 'music_hint'),
+      });
+      storage.setItem(STORAGE_KEYS.musicHintShown, 'true');
+    }
 
-    const totalGames = parseInt(localStorage.getItem('total_games_started') || '0', 10) + 1;
-    localStorage.setItem('total_games_started', String(totalGames));
+    const totalGames = storage.getNumber(STORAGE_KEYS.totalGamesStarted, 0) + 1;
+    storage.setItem(STORAGE_KEYS.totalGamesStarted, String(totalGames));
 
     const midX = Math.floor(gridSize / 2);
     const midY = Math.floor(gridHeight / 2);
@@ -425,13 +405,15 @@ export const App: React.FC = () => {
       [midX, midY + 2],
     ];
 
-    setSnake(initialSnake);
-    setObstacles([]);
-    setBonusFood(null);
-    setDirection('UP');
-    directionQueueRef.current = [];
-    setScore(0);
-    setGameSpeed(GameLogic.INITIAL_SPEED);
+    dispatch({
+      type: 'RESET',
+      state: {
+        ...createInitialGameState(),
+        snake: initialSnake,
+        food: [midX, midY - 4],
+      },
+      randomSeed: createRandomSeed(),
+    });
 
     sessionFoodEatenRef.current = 0;
     bonusFoodEatenRef.current = 0;
@@ -440,14 +422,10 @@ export const App: React.FC = () => {
     bonusEatenFastRef.current = false;
     wallHitRef.current = false;
     mazePassesRef.current = 0;
-    lastNarrowCellRef.current = null;
     directionsUsedRef.current = new Set(['UP']);
 
-    const newFood = spawnFood(initialSnake, [], null) || [midX, midY - 4];
-    setFood(newFood);
-
     setScreen('game');
-    gameStartTimeRef.current = Date.now();
+    gameStartTimeRef.current = currentTimeMs();
     startCountdown();
   };
 
@@ -456,7 +434,7 @@ export const App: React.FC = () => {
     soundManager.playButtonClick();
     if (restoreGameState()) {
       setScreen('game');
-      gameStartTimeRef.current = Date.now();
+      gameStartTimeRef.current = currentTimeMs();
       startCountdown();
     } else {
       setScreen('menu');
@@ -470,44 +448,45 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     if (countdown === null) return;
-    if (countdown <= 0) {
-      setCountdown(null);
-      return;
-    }
-
     const timer = setTimeout(() => {
-      setCountdown(countdown - 1);
+      setCountdown(countdown <= 1 ? null : countdown - 1);
     }, GameLogic.COUNTDOWN_DELAY_MS);
 
     return () => clearTimeout(timer);
   }, [countdown]);
 
   // Finish Game (Game Over)
-  const finishGame = (diedToOwnTail: boolean) => {
+  const finishGame = useCallback((
+    diedToOwnTail: boolean,
+    finalScore = score,
+    outcome: 'lost' | 'won' = 'lost'
+  ) => {
     soundManager.playCrash();
     vibrate(400);
     clearSavedGame();
 
     const sessionDurationSeconds = Math.max(
       1,
-      Math.floor((Date.now() - gameStartTimeRef.current) / 1000)
+      Math.floor((currentTimeMs() - gameStartTimeRef.current) / 1000)
     );
-    const currentHigh = parseInt(localStorage.getItem('high_score') || '0', 10);
-    const isNewHigh = score > currentHigh;
-    const finalHigh = Math.max(score, currentHigh);
+    const currentHigh = storage.getNumber(STORAGE_KEYS.highScore, 0);
+    const isNewHigh = finalScore > currentHigh;
+    const finalHigh = Math.max(finalScore, currentHigh);
     const finalTotalFood = totalFood + sessionFoodEatenRef.current;
     const finalTotalTime = totalPlayTime + sessionDurationSeconds;
 
     // Save stats
-    localStorage.setItem('high_score', String(finalHigh));
-    localStorage.setItem('total_food', String(finalTotalFood));
-    localStorage.setItem('total_play_time', String(finalTotalTime));
+    storage.setItem(STORAGE_KEYS.highScore, String(finalHigh));
+    storage.setItem(STORAGE_KEYS.totalFood, String(finalTotalFood));
+    storage.setItem(STORAGE_KEYS.totalPlayTime, String(finalTotalTime));
 
     setHighScore(finalHigh);
     setTotalFood(finalTotalFood);
     setTotalPlayTime(finalTotalTime);
+    setIsNewHighScore(isNewHigh && finalScore > 0);
+    setGameOutcome(outcome);
 
-    if (isNewHigh && score > 0) {
+    if (isNewHigh && finalScore > 0) {
       confetti({
         particleCount: 80,
         spread: 70,
@@ -516,7 +495,7 @@ export const App: React.FC = () => {
     }
 
     const gameOverData: GameOverData = {
-      score,
+      score: finalScore,
       sessionFoodEaten: sessionFoodEatenRef.current,
       bonusFoodEatenInGame: bonusFoodEatenRef.current,
       foodEatenWithoutWall: foodWithoutWallRef.current,
@@ -533,202 +512,139 @@ export const App: React.FC = () => {
       sessionPlayTime: sessionDurationSeconds,
       totalPlayTime: finalTotalTime,
       totalFoodEaten: finalTotalFood,
-      totalGamesStarted: parseInt(localStorage.getItem('total_games_started') || '0', 10),
+      totalGamesStarted: storage.getNumber(STORAGE_KEYS.totalGamesStarted, 0),
       foodEatenWithoutWall: gameOverData.foodEatenWithoutWall,
       bonusFoodEatenInGame: gameOverData.bonusFoodEatenInGame,
       foodEatenAtMaxSpeed: gameOverData.foodEatenAtMaxSpeed,
       mazePasses: gameOverData.mazePasses,
       usedSingleDirection: gameOverData.usedSingleDirection,
-      usedAllThemes: localStorage.getItem('used_all_themes') === 'true',
-      usedCustomTheme: localStorage.getItem('used_custom_theme') === 'true',
+      usedAllThemes: storage.getItem(STORAGE_KEYS.usedAllThemes) === 'true',
+      usedCustomTheme: storage.getItem(STORAGE_KEYS.usedCustomTheme) === 'true',
       diedToOwnTail: gameOverData.diedToOwnTail,
-      diedNearHighScore: score > 0 && score === currentHigh - 1,
+      diedNearHighScore: finalScore > 0 && finalScore === currentHigh - 1,
       diedFast:
-        Date.now() - gameStartTimeRef.current < GameLogic.FAST_DEATH_THRESHOLD_MS &&
+        currentTimeMs() - gameStartTimeRef.current < GameLogic.FAST_DEATH_THRESHOLD_MS &&
         !diedToOwnTail,
     };
 
-    achievementsManager.checkAchievements(fullGameData, (unlockedAch) => {
-      soundManager.playBonusEat();
-      setToast({
-        id: unlockedAch.id,
-        type: 'achievement',
-        title: t(lang, 'achievement_unlocked'),
-        message: t(lang, unlockedAch.nameKey),
-      });
-    });
+    achievementsManager.checkAchievements(fullGameData, handleAchievementUnlocked);
 
     setScreen('game_over');
-  };
+  }, [clearSavedGame, handleAchievementUnlocked, score, totalFood, totalPlayTime]);
 
-  // Main game tick
+  // Process reducer events outside the pure game transition.
+  useEffect(() => {
+    const event = gameState.event;
+    if (!event || processedGameEventRef.current === gameState.eventId) return;
+    processedGameEventRef.current = gameState.eventId;
+
+    if (event.directionChanged) directionsUsedRef.current.add(event.directionChanged);
+    if (event.wallHit) wallHitRef.current = true;
+    if (event.narrowPass) mazePassesRef.current += 1;
+
+    if (event.type === 'regular-food' || event.type === 'bonus-food') {
+      sessionFoodEatenRef.current += 1;
+      if (event.type === 'bonus-food') {
+        bonusFoodEatenRef.current += 1;
+        bonusEatenFastRef.current ||= currentTimeMs() - bonusSpawnTimeRef.current <
+          GameLogic.BONUS_FOOD_FAST_EAT_TIMEOUT_MS;
+        bonusRemainingRef.current = 0;
+        if (bonusTimeoutRef.current) clearTimeout(bonusTimeoutRef.current);
+        bonusTimeoutRef.current = null;
+        soundManager.playBonusEat();
+      } else {
+        if (!wallHitRef.current) foodWithoutWallRef.current += 1;
+        if (event.gameSpeedBefore === GameLogic.MIN_SPEED) foodAtMaxSpeedRef.current += 1;
+        soundManager.playEat();
+        if (event.score % GameLogic.BONUS_FOOD_SPAWN_INTERVAL === 0 && bonusFood) {
+          bonusSpawnTimeRef.current = currentTimeMs();
+          bonusRemainingRef.current = GameLogic.BONUS_FOOD_DISPLAY_TIMEOUT_MS;
+        }
+      }
+
+      achievementsManager.checkScoreAchievements(event.score, handleAchievementUnlocked);
+      saveGameState();
+    }
+
+    if (event.type === 'collision' || event.type === 'victory') {
+      finishGame(
+        event.diedToOwnTail,
+        event.score,
+        event.type === 'victory' ? 'won' : 'lost'
+      );
+    }
+  }, [
+    gameState.eventId,
+    gameState.event,
+    bonusFood,
+    finishGame,
+    handleAchievementUnlocked,
+    saveGameState,
+  ]);
+
   useEffect(() => {
     if (screen !== 'game' || countdown !== null) return;
-
-    const interval = setInterval(() => {
-      setSnake((prevSnake) => {
-        // Poll direction queue
-        let currentDir = direction;
-        if (directionQueueRef.current.length > 0) {
-          const nextDir = directionQueueRef.current.shift()!;
-          if (isValidDirectionChange(currentDir, nextDir)) {
-            currentDir = nextDir;
-            setDirection(nextDir);
-            directionsUsedRef.current.add(nextDir);
-          }
-        }
-
-        const head = prevSnake[0];
-        let nx = head[0];
-        let ny = head[1];
-
-        switch (currentDir) {
-          case 'UP':
-            ny -= 1;
-            break;
-          case 'DOWN':
-            ny += 1;
-            break;
-          case 'LEFT':
-            nx -= 1;
-            break;
-          case 'RIGHT':
-            nx += 1;
-            break;
-        }
-
-        // Wall boundary check and wrap
-        if (nx < 0 || nx >= gridSize || ny < 0 || ny >= gridHeight) {
-          wallHitRef.current = true;
-          if (nx < 0) nx = gridSize - 1;
-          else if (nx >= gridSize) nx = 0;
-          if (ny < 0) ny = gridHeight - 1;
-          else if (ny >= gridHeight) ny = 0;
-        }
-
-        const newHead: Point = [nx, ny];
-
-        // Narrow pass detection
-        const isNarrow =
-          prevSnake.length > GameLogic.MIN_SNAKE_LENGTH_FOR_NARROW_PASS &&
-          isNarrowPass(newHead, obstacles);
-        if (
-          isNarrow &&
-          (!lastNarrowCellRef.current ||
-            lastNarrowCellRef.current[0] !== newHead[0] ||
-            lastNarrowCellRef.current[1] !== newHead[1])
-        ) {
-          mazePassesRef.current += 1;
-          lastNarrowCellRef.current = newHead;
-        } else if (!isNarrow) {
-          lastNarrowCellRef.current = null;
-        }
-
-        // Collision with self
-        const hitOwnTail = prevSnake.some(([sx, sy]) => sx === newHead[0] && sy === newHead[1]);
-        if (hitOwnTail) {
-          finishGame(true);
-          return prevSnake;
-        }
-
-        // Collision with obstacles
-        const hitObstacle = obstacles.some(([ox, oy]) => ox === newHead[0] && oy === newHead[1]);
-        if (hitObstacle) {
-          finishGame(false);
-          return prevSnake;
-        }
-
-        const newSnake = [newHead, ...prevSnake];
-
-        // Check Bonus food collision
-        if (bonusFood && newHead[0] === bonusFood[0] && newHead[1] === bonusFood[1]) {
-          if (Date.now() - bonusSpawnTimeRef.current < GameLogic.BONUS_FOOD_FAST_EAT_TIMEOUT_MS) {
-            bonusEatenFastRef.current = true;
-          }
-          const nextScore = score + GameLogic.BONUS_POINTS;
-          setScore(nextScore);
-          sessionFoodEatenRef.current += 1;
-          bonusFoodEatenRef.current += 1;
-
-          // Snake grows by 2 extra segments (total 3 including new head)
-          const tail = prevSnake[prevSnake.length - 1];
-          newSnake.push(tail);
-          newSnake.push(tail);
-
-          setBonusFood(null);
-          if (bonusTimeoutRef.current) {
-            clearTimeout(bonusTimeoutRef.current);
-          }
-          soundManager.playBonusEat();
-
-          // Spawn obstacles at level thresholds
-          const level = Math.floor(nextScore / 10);
-          if (level > 0 && obstacles.length < level * 4) {
-            setObstacles((prevObs) => tryAddObstacle(prevObs, newSnake, food, null));
-          }
-
-          saveGameState();
-          return newSnake;
-        }
-
-        // Check regular food collision
-        if (newHead[0] === food[0] && newHead[1] === food[1]) {
-          const nextScore = score + GameLogic.REGULAR_POINTS;
-          setScore(nextScore);
-          sessionFoodEatenRef.current += 1;
-
-          if (!wallHitRef.current) {
-            foodWithoutWallRef.current += 1;
-          }
-          if (gameSpeed === GameLogic.MIN_SPEED) {
-            foodAtMaxSpeedRef.current += 1;
-          }
-
-          soundManager.playEat();
-
-          // Increase speed
-          const nextSpeed = Math.max(GameLogic.MIN_SPEED, gameSpeed - GameLogic.SPEED_INCREMENT);
-          setGameSpeed(nextSpeed);
-
-          // Level maze obstacle update
-          const level = Math.floor(nextScore / 10);
-          let updatedObs = obstacles;
-          if (level > 0 && obstacles.length < level * 4) {
-            updatedObs = tryAddObstacle(obstacles, newSnake, food, bonusFood);
-            setObstacles(updatedObs);
-          }
-
-          // Bonus food spawn interval
-          if (nextScore > 0 && nextScore % GameLogic.BONUS_FOOD_SPAWN_INTERVAL === 0) {
-            triggerSpawnBonusFood(newSnake, updatedObs, food);
-          }
-
-          // Next food
-          const nextFood = spawnFood(newSnake, updatedObs, bonusFood);
-          if (!nextFood) {
-            // Screen full - victory finish
-            finishGame(false);
-            return newSnake;
-          }
-          setFood(nextFood);
-
-          saveGameState();
-          return newSnake;
-        }
-
-        // Regular move - drop tail
-        newSnake.pop();
-        return newSnake;
-      });
-    }, gameSpeed);
-
+    const interval = setInterval(
+      () => dispatch({ type: 'TICK', randomSeed: createRandomSeed() }),
+      gameSpeed
+    );
     return () => clearInterval(interval);
-  }, [screen, countdown, gameSpeed, direction, food, bonusFood, obstacles, score]);
+  }, [screen, countdown, gameSpeed]);
+
+  useEffect(() => {
+    soundManager.setMusicMode(
+      screen === 'game' ? 'playing' : screen === 'pause' ? 'paused' : 'stopped'
+    );
+  }, [screen, musicEnabled]);
+
+  useEffect(() => {
+    if (screen !== 'game' || countdown !== null || !bonusFood) return;
+    if (bonusRemainingRef.current <= 0) {
+      dispatch({ type: 'CLEAR_BONUS' });
+      return;
+    }
+
+    bonusDeadlineRef.current = currentTimeMs() + bonusRemainingRef.current;
+    bonusTimeoutRef.current = setTimeout(() => {
+      bonusRemainingRef.current = 0;
+      bonusTimeoutRef.current = null;
+      dispatch({ type: 'CLEAR_BONUS' });
+    }, bonusRemainingRef.current);
+    return () => {
+      if (bonusTimeoutRef.current) {
+        bonusRemainingRef.current = Math.max(0, bonusDeadlineRef.current - currentTimeMs());
+        clearTimeout(bonusTimeoutRef.current);
+        bonusTimeoutRef.current = null;
+      }
+    };
+  }, [screen, countdown, bonusFood, saveGameState]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'hidden' || screen !== 'game') return;
+      if (bonusFood && bonusTimeoutRef.current) {
+        bonusRemainingRef.current = Math.max(0, bonusDeadlineRef.current - currentTimeMs());
+        clearTimeout(bonusTimeoutRef.current);
+        bonusTimeoutRef.current = null;
+      }
+      saveGameState();
+      setHasSavedGame(true);
+      setScreen('pause');
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [screen, snake, obstacles, direction, food, bonusFood, score, gameSpeed, saveGameState]);
 
   // Back button in Game -> Pause menu
   const handleBackInGame = () => {
     soundManager.playButtonClick();
+    if (bonusFood && bonusTimeoutRef.current) {
+      bonusRemainingRef.current = Math.max(0, bonusDeadlineRef.current - currentTimeMs());
+      clearTimeout(bonusTimeoutRef.current);
+      bonusTimeoutRef.current = null;
+    }
     saveGameState();
+    setHasSavedGame(true);
     setScreen('pause');
   };
 
@@ -742,8 +658,56 @@ export const App: React.FC = () => {
   const handleHomeFromPause = () => {
     soundManager.playButtonClick();
     saveGameState();
+    setHasSavedGame(true);
     setScreen('menu');
   };
+
+  const handleSwipeStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
+    swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleSwipeEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start) return;
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - start.x;
+    const dy = touch.clientY - start.y;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < 25) return;
+    soundManager.playButtonClick();
+    vibrate(40);
+    if (Math.abs(dx) > Math.abs(dy)) {
+      queueDirection(dx > 0 ? 'RIGHT' : 'LEFT');
+    } else {
+      queueDirection(dy > 0 ? 'DOWN' : 'UP');
+    }
+  };
+
+  useEffect(() => {
+    if (screen !== 'game' && screen !== 'pause') return;
+    const handleSpace = (event: KeyboardEvent) => {
+      if (event.code !== 'Space' || (event.target instanceof HTMLElement &&
+        ['INPUT', 'TEXTAREA', 'BUTTON'].includes(event.target.tagName))) return;
+      event.preventDefault();
+      soundManager.playButtonClick();
+      if (screen === 'game') {
+        if (bonusFood && bonusTimeoutRef.current) {
+          bonusRemainingRef.current = Math.max(0, bonusDeadlineRef.current - currentTimeMs());
+          clearTimeout(bonusTimeoutRef.current);
+          bonusTimeoutRef.current = null;
+        }
+        saveGameState();
+        setHasSavedGame(true);
+        setScreen('pause');
+      } else {
+        setScreen('game');
+        startCountdown();
+      }
+    };
+    window.addEventListener('keydown', handleSpace);
+    return () => window.removeEventListener('keydown', handleSpace);
+  }, [screen, snake, obstacles, direction, food, bonusFood, score, gameSpeed, saveGameState]);
 
   // Share score
   const handleShareScore = () => {
@@ -759,7 +723,7 @@ export const App: React.FC = () => {
         .catch(() => {});
     } else {
       navigator.clipboard.writeText(shareText).then(() => {
-        setToast({
+        enqueueToast({
           id: 'share_copied',
           type: 'info',
           message: t(lang, 'score_copied'),
@@ -768,21 +732,24 @@ export const App: React.FC = () => {
     }
   };
 
-  // Rewarded Ad watched
-  const handleAdReward = () => {
-    setToast({
-      id: 'support_reward',
-      type: 'support',
-      message: t(lang, 'thank_you_for_support'),
-    });
+  const openCareer = () => {
+    soundManager.playButtonClick();
+    setIsCareerOpen(true);
+  };
+
+  const openSettings = () => {
+    soundManager.playButtonClick();
+    setIsSettingsOpen(true);
+  };
+
+  const handleHomeFromGameOver = () => {
+    soundManager.playButtonClick();
+    setScreen('menu');
   };
 
   return (
-    <div className="w-full h-screen flex flex-col items-center justify-between bg-nokia-grid overflow-hidden text-[#3A3F44] font-nokia select-none">
-      {/* Toast notifications */}
-      <Toast toast={toast} onDismiss={() => setToast(null)} />
-
-      {/* Career Modal */}
+    <div className="app-shell w-full flex flex-col items-center justify-between bg-nokia-grid overflow-hidden text-[#3A3F44] font-nokia select-none">
+      <Toast toast={toast} onDismiss={() => setToast((queue) => queue.slice(1))} />
       <CareerModal
         isOpen={isCareerOpen}
         onClose={() => setIsCareerOpen(false)}
@@ -791,268 +758,86 @@ export const App: React.FC = () => {
         totalFood={totalFood}
         totalPlayTime={totalPlayTime}
       />
-
-      {/* Settings Modal */}
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
         lang={lang}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
+        lcdEffectsEnabled={lcdEffectsEnabled}
+        onToggleLcdEffects={handleToggleLcdEffects}
+        smoothMotionEnabled={smoothMotionEnabled}
+        onToggleSmoothMotion={handleToggleSmoothMotion}
+        musicEnabled={musicEnabled}
+        onToggleMusic={handleToggleMusic}
+        rankDecorationsEnabled={rankDecorationsEnabled}
+        onToggleRankDecorations={handleToggleRankDecorations}
         controlMode={controlMode}
         onSelectControlMode={handleSelectControlMode}
         colors={colors}
         onUpdateColors={handleUpdateColors}
       />
 
-      {/* Ad Modal */}
-      <AdModal
-        isOpen={isAdOpen}
-        onClose={() => setIsAdOpen(false)}
-        onReward={handleAdReward}
-        lang={lang}
-      />
-
-      {/* ================= MAIN MENU SCREEN ================= */}
       {screen === 'menu' && (
-        <div className="w-full h-full flex flex-col items-center justify-between p-4 sm:p-8 max-w-md mx-auto overflow-y-auto">
-          {/* Top Bar with Language Toggle */}
-          <div className="w-full flex justify-end">
-            <button
-              type="button"
-              onClick={handleToggleLang}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#3A3F44] text-[#C7F0D8] rounded-lg font-bold font-mono-retro text-sm hover:bg-black transition cursor-pointer shadow-md"
-            >
-              <Globe className="w-4 h-4" />
-              <span>{lang.toUpperCase()}</span>
-            </button>
-          </div>
-
-          {/* Title and High Score */}
-          <div className="text-center my-auto py-4">
-            <h1 className="text-4xl sm:text-5xl font-black tracking-widest text-[#3A3F44] font-mono-retro uppercase drop-shadow-xs">
-              {t(lang, 'title_name')}
-            </h1>
-            <div className="mt-3 text-lg sm:text-xl font-bold font-mono-retro tracking-wider text-[#1E2328]">
-              {t(lang, 'high_score', { score: highScore })}
-            </div>
-          </div>
-
-          {/* Menu Buttons Stack */}
-          <div className="w-full space-y-3 max-w-xs mb-4">
-            {/* New Game */}
-            <button
-              type="button"
-              onClick={startNewGame}
-              className="w-full py-3.5 px-6 rounded-xl border-3 border-[#3A3F44] bg-transparent hover:bg-[#3A3F44] text-[#3A3F44] hover:text-[#C7F0D8] font-black font-mono-retro text-lg tracking-wider transition-all duration-150 cursor-pointer shadow-sm active:scale-98"
-            >
-              {t(lang, 'new_game')}
-            </button>
-
-            {/* Resume Game (if saved) */}
-            {hasSavedGame && (
-              <button
-                type="button"
-                onClick={resumeSavedGame}
-                className="w-full py-3.5 px-6 rounded-xl border-3 border-[#3A3F44] bg-[#3A3F44]/10 hover:bg-[#3A3F44] text-[#3A3F44] hover:text-[#C7F0D8] font-black font-mono-retro text-lg tracking-wider transition-all duration-150 cursor-pointer shadow-sm active:scale-98 flex items-center justify-center gap-2"
-              >
-                <Play className="w-5 h-5 fill-current" />
-                {t(lang, 'resume_game')}
-              </button>
-            )}
-
-            {/* Career */}
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.playButtonClick();
-                setIsCareerOpen(true);
-              }}
-              className="w-full py-3.5 px-6 rounded-xl border-3 border-[#3A3F44] bg-transparent hover:bg-[#3A3F44] text-[#3A3F44] hover:text-[#C7F0D8] font-black font-mono-retro text-lg tracking-wider transition-all duration-150 cursor-pointer shadow-sm active:scale-98 flex items-center justify-center gap-2"
-            >
-              <Trophy className="w-5 h-5" />
-              {t(lang, 'career')}
-            </button>
-
-            {/* Settings */}
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.playButtonClick();
-                setIsSettingsOpen(true);
-              }}
-              className="w-full py-3.5 px-6 rounded-xl border-3 border-[#3A3F44] bg-transparent hover:bg-[#3A3F44] text-[#3A3F44] hover:text-[#C7F0D8] font-black font-mono-retro text-lg tracking-wider transition-all duration-150 cursor-pointer shadow-sm active:scale-98 flex items-center justify-center gap-2"
-            >
-              <Sliders className="w-5 h-5" />
-              {t(lang, 'settings')}
-            </button>
-          </div>
-
-          {/* Support Developer & Watch Ads button */}
-          <div className="w-full max-w-xs text-center pt-2 pb-2">
-            <span className="text-[11px] text-[#3A3F44]/70 font-mono-retro block mb-1">
-              {t(lang, 'support_developer')}
-            </span>
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.playButtonClick();
-                setIsAdOpen(true);
-              }}
-              className="w-full py-2.5 px-4 rounded-lg border-2 border-[#3A3F44]/60 bg-black/5 hover:bg-[#3A3F44] text-[#3A3F44] hover:text-[#C7F0D8] font-bold font-mono-retro text-sm tracking-wider transition flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Tv className="w-4 h-4" />
-              {t(lang, 'watch_ads')}
-            </button>
-          </div>
-        </div>
+        <MenuScreen
+          lang={lang}
+          highScore={highScore}
+          hasSavedGame={hasSavedGame}
+          onToggleLang={handleToggleLang}
+          onNewGame={startNewGame}
+          onResume={resumeSavedGame}
+          onCareer={openCareer}
+          onSettings={openSettings}
+        />
       )}
-
-      {/* ================= ACTIVE GAME SCREEN ================= */}
       {screen === 'game' && (
-        <div className="w-full h-full flex flex-col items-center justify-between p-2 sm:p-4 max-w-md mx-auto">
-          {/* Top Bar: Back arrow and Score */}
-          <div className="w-full flex items-center justify-between px-2 pt-1 pb-1">
-            <button
-              type="button"
-              onClick={handleBackInGame}
-              aria-label={t(lang, 'back')}
-              className="p-2 rounded-xl bg-red-600/10 hover:bg-red-600/20 text-red-600 transition cursor-pointer"
-            >
-              <ArrowLeft className="w-6 h-6 stroke-[3]" />
-            </button>
-
-            <div className="text-2xl sm:text-3xl font-black font-mono-retro tracking-wider text-[#1E2328]">
-              {t(lang, 'score', { score })}
-            </div>
-
-            <div className="w-8" />
-          </div>
-
-          {/* Play Field Canvas with Countdown Overlay */}
-          <div className="relative w-full flex items-center justify-center p-1 my-auto">
-            <SnakeCanvas
-              snake={snake}
-              obstacles={obstacles}
-              food={food}
-              bonusFood={bonusFood}
-              direction={direction}
-              colors={colors}
-            />
-
-            {/* Countdown Overlay */}
-            {countdown !== null && countdown > 0 && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-2xs rounded-lg">
-                <span className="text-7xl sm:text-8xl font-black text-white font-mono-retro drop-shadow-lg animate-countdown">
-                  {countdown}
-                </span>
-              </div>
-            )}
-          </div>
-
-          {/* Controls Area */}
-          <div className="w-full pb-2">
-            <Controls
-              mode={controlMode}
-              currentDirection={direction}
-              onTurnUp={turnUp}
-              onTurnDown={turnDown}
-              onTurnLeft={turnLeft}
-              onTurnRight={turnRight}
-              onZigZagLeft={turnZigZagLeft}
-              onZigZagRight={turnZigZagRight}
-              lang={lang}
-            />
-          </div>
-        </div>
+        <GameScreen
+          lang={lang}
+          controlMode={controlMode}
+          snake={snake}
+          obstacles={obstacles}
+          food={food}
+          bonusFood={bonusFood}
+          direction={direction}
+          colors={colors}
+          score={score}
+          countdown={countdown}
+          gameSpeed={gameSpeed}
+          lcdEffectsEnabled={lcdEffectsEnabled}
+          smoothMotionEnabled={smoothMotionEnabled}
+          rankDecorationsEnabled={rankDecorationsEnabled}
+          rankDecoration={achievementsManager.getRankKey(highScore)}
+          onBack={handleBackInGame}
+          onTurnUp={turnUp}
+          onTurnDown={turnDown}
+          onTurnLeft={turnLeft}
+          onTurnRight={turnRight}
+          onZigZagLeft={turnZigZagLeft}
+          onZigZagRight={turnZigZagRight}
+          onSwipeStart={handleSwipeStart}
+          onSwipeMove={(event) => event.preventDefault()}
+          onSwipeEnd={handleSwipeEnd}
+        />
       )}
-
-      {/* ================= PAUSE MENU SCREEN ================= */}
       {screen === 'pause' && (
-        <div className="w-full h-full flex flex-col items-center justify-center p-6 max-w-md mx-auto space-y-6">
-          <div className="text-center">
-            <h2 className="text-3xl sm:text-4xl font-black font-mono-retro tracking-widest text-[#3A3F44] uppercase">
-              {t(lang, 'game_paused_title')}
-            </h2>
-            <div className="text-xl font-bold font-mono-retro mt-2">
-              {t(lang, 'score', { score })}
-            </div>
-          </div>
-
-          <div className="w-full space-y-3 max-w-xs">
-            <button
-              type="button"
-              onClick={handleResumeFromPause}
-              className="w-full py-4 px-6 rounded-xl border-3 border-[#3A3F44] bg-[#3A3F44] text-[#C7F0D8] hover:bg-black font-black font-mono-retro text-lg tracking-wider transition cursor-pointer shadow-md flex items-center justify-center gap-2"
-            >
-              <Play className="w-5 h-5 fill-current" />
-              {t(lang, 'resume_game')}
-            </button>
-
-            <button
-              type="button"
-              onClick={handleHomeFromPause}
-              className="w-full py-4 px-6 rounded-xl border-3 border-red-600 bg-transparent text-red-600 hover:bg-red-600 hover:text-white font-black font-mono-retro text-lg tracking-wider transition cursor-pointer shadow-sm flex items-center justify-center gap-2"
-            >
-              <Home className="w-5 h-5" />
-              {t(lang, 'main_menu')}
-            </button>
-          </div>
-        </div>
+        <PauseScreen
+          lang={lang}
+          score={score}
+          onResume={handleResumeFromPause}
+          onHome={handleHomeFromPause}
+        />
       )}
-
-      {/* ================= GAME OVER SCREEN ================= */}
       {screen === 'game_over' && (
-        <div className="w-full h-full flex flex-col items-center justify-center p-6 max-w-md mx-auto space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-4xl sm:text-5xl font-black font-mono-retro tracking-widest text-red-600 uppercase drop-shadow-xs">
-              {t(lang, 'game_over')}
-            </h2>
-            <div className="text-2xl font-bold font-mono-retro text-[#1E2328]">
-              {t(lang, 'your_score', { score })}
-            </div>
-            <div className="text-lg font-bold font-mono-retro text-[#2E7D32] bg-[#2E7D32]/10 py-1 px-4 rounded-full inline-block border border-[#2E7D32]/30">
-              {t(lang, 'rank_label', { rank: achievementsManager.getRank(score, lang) })}
-            </div>
-          </div>
-
-          <div className="w-full space-y-3 max-w-xs">
-            {/* Try Again */}
-            <button
-              type="button"
-              onClick={startNewGame}
-              className="w-full py-3.5 px-6 rounded-xl border-3 border-[#3A3F44] bg-[#3A3F44] text-[#C7F0D8] hover:bg-black font-black font-mono-retro text-lg tracking-wider transition cursor-pointer shadow-md flex items-center justify-center gap-2"
-            >
-              <RotateCcw className="w-5 h-5" />
-              {t(lang, 'try_again')}
-            </button>
-
-            {/* Share Score (if score > 0) */}
-            {score > 0 && (
-              <button
-                type="button"
-                onClick={handleShareScore}
-                className="w-full py-3.5 px-6 rounded-xl border-2 border-[#3A3F44] bg-white/40 hover:bg-white text-[#3A3F44] font-bold font-mono-retro text-base tracking-wider transition cursor-pointer shadow-xs flex items-center justify-center gap-2"
-              >
-                <Share2 className="w-5 h-5" />
-                {t(lang, 'share_score')}
-              </button>
-            )}
-
-            {/* Main Menu */}
-            <button
-              type="button"
-              onClick={() => {
-                soundManager.playButtonClick();
-                setScreen('menu');
-              }}
-              className="w-full py-3.5 px-6 rounded-xl border-2 border-[#3A3F44]/50 hover:bg-black/10 text-[#3A3F44] font-bold font-mono-retro text-base tracking-wider transition cursor-pointer flex items-center justify-center gap-2"
-            >
-              <Home className="w-5 h-5" />
-              {t(lang, 'main_menu')}
-            </button>
-          </div>
-        </div>
+        <GameOverScreen
+          lang={lang}
+          score={score}
+          rank={achievementsManager.getRank(score, lang)}
+          won={gameOutcome === 'won'}
+          isNewHighScore={isNewHighScore}
+          onTryAgain={startNewGame}
+          onShare={handleShareScore}
+          onHome={handleHomeFromGameOver}
+        />
       )}
     </div>
   );

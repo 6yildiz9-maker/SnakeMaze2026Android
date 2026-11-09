@@ -31,3 +31,9 @@ signing.properties
 *.apk.idsig
 *.log
 logcat*.txt
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+*.local
