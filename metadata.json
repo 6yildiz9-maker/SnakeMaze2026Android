@@ -1,0 +1,7 @@
+{
+  "name": "Snake Maze 2026",
+  "description": "Retro Nokia-style snake game with maze obstacles, bonus foods, achievements, career stats, customizable themes, and multiple control modes.",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

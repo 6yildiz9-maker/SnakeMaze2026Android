@@ -1,0 +1,103 @@
+export const GameLogic = {
+  DEFAULT_GRID_SIZE: 20,
+  DEFAULT_GRID_HEIGHT: 20,
+  MIN_SPEED: 80,
+  INITIAL_SPEED: 300,
+  SPEED_INCREMENT: 2,
+  BONUS_FOOD_FAST_EAT_TIMEOUT_MS: 2000,
+  BONUS_FOOD_DISPLAY_TIMEOUT_MS: 5000,
+  BONUS_FOOD_SPAWN_INTERVAL: 10,
+  BONUS_POINTS: 3,
+  REGULAR_POINTS: 1,
+  COUNTDOWN_SECONDS: 5,
+  COUNTDOWN_DELAY_MS: 1000,
+  MIN_SNAKE_LENGTH_FOR_NARROW_PASS: 20,
+  FAST_DEATH_THRESHOLD_MS: 5000,
+};
+
+export const RankThresholds = {
+  LEGENDARY: 500,
+  COBRA_KING: 350,
+  MAZE_MASTER: 200,
+  RATTLER: 100,
+  ROOKIE: 50,
+  WORM: 20,
+};
+
+export const AchievementThresholds = {
+  CRAWLING_SCORE_MIN: 50,
+  CRAWLING_SCORE_MAX: 99,
+  EGG_BREAKER_SCORE: 50,
+  FAST_CRAWLER_SCORE: 100,
+  PYTHON_PATH_SCORE: 250,
+  LEGENDARY_DRAGON_SCORE: 500,
+  WALL_PHOBIA_FOOD: 30,
+  NARROW_PASSER_PASSES: 5,
+  BONUS_HUNTER_FOOD: 5,
+  LIGHT_SPEED_FOOD: 10,
+  SURVIVOR_TIME_SECONDS: 300,
+  GLUTTON_FOOD: 1000,
+  LOYAL_PLAYER_GAMES: 100,
+  TIME_TRAVELER_SECONDS: 3600,
+};
+
+export const DefaultColors = {
+  NOKIA_BG: '#C7F0D8',
+  NOKIA_DARK: '#3A3F44',
+  NOKIA_GRID: '#A2C5B1',
+  SNAKE_BODY: '#000000',
+  SNAKE_HEAD: '#555555',
+  FOOD: '#FF0000',
+  OBSTACLE: '#424242',
+  BONUS_FOOD_OUTER: '#FFFF00',
+  BONUS_FOOD_INNER: '#FF00FF',
+  EYES: '#FFFFFF',
+  PUPILS: '#000000',
+  ACHIEVEMENT_LOCKED_BG: '#333333',
+  ACHIEVEMENT_LOCKED_TEXT: '#AAAAAA',
+  ACHIEVEMENT_UNLOCKED_BG: '#C8E6C9',
+  ACHIEVEMENT_UNLOCKED_TEXT: '#000000',
+};
+
+export const PRESET_THEMES = [
+  {
+    id: 'nokia_classic',
+    name: 'Nokia Classic',
+    snakeHead: '#555555',
+    snakeBody: '#000000',
+    food: '#FF0000',
+    map: '#C7F0D8',
+  },
+  {
+    id: 'gameboy_amber',
+    name: 'Gameboy Green',
+    snakeHead: '#2A4D15',
+    snakeBody: '#0F2C05',
+    food: '#D04020',
+    map: '#9BBC0F',
+  },
+  {
+    id: 'cyberpunk_neon',
+    name: 'Cyberpunk',
+    snakeHead: '#00F0FF',
+    snakeBody: '#7000FF',
+    food: '#FF0077',
+    map: '#0D0E1A',
+  },
+  {
+    id: 'monochrome_dark',
+    name: 'Matrix Dark',
+    snakeHead: '#00FF66',
+    snakeBody: '#009933',
+    food: '#FFFFFF',
+    map: '#121512',
+  },
+  {
+    id: 'sunset_orange',
+    name: 'Sunset Arcade',
+    snakeHead: '#FF3366',
+    snakeBody: '#990033',
+    food: '#FFDD00',
+    map: '#FFE8D6',
+  },
+];

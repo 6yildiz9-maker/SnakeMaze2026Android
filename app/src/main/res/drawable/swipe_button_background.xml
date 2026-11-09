@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="oval">
-    <stroke
-        android:width="2dp"
-        android:color="#402C3500" /> <!-- Low alpha nokia_dark_text -->
-    <solid android:color="#202C3500" /> <!-- Very low alpha solid -->
-</shape>
