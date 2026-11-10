@@ -229,6 +229,108 @@ class RetroSoundManager {
     }
   }
 
+  public playGoldenEat() {
+    if (!this.isEnabled) return;
+    const ctx = this.initCtx();
+    if (!ctx) {
+      this.playFallback('eat');
+      return;
+    }
+    try {
+      const now = ctx.currentTime;
+      [880, 1108.73, 1318.51, 1760].forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+        gain.gain.setValueAtTime(0.12, now + idx * 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + (idx + 1) * 0.04 + 0.03);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + idx * 0.04);
+        osc.stop(now + (idx + 1) * 0.04 + 0.03);
+      });
+    } catch (error) {
+      console.warn('Unable to play golden food sound:', error);
+    }
+  }
+
+  public playIceEat() {
+    if (!this.isEnabled) return;
+    const ctx = this.initCtx();
+    if (!ctx) {
+      this.playFallback('eat');
+      return;
+    }
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.15);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    } catch (error) {
+      console.warn('Unable to play ice food sound:', error);
+    }
+  }
+
+  public playPoisonEat() {
+    if (!this.isEnabled) return;
+    const ctx = this.initCtx();
+    if (!ctx) {
+      this.playFallback('crash');
+      return;
+    }
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(150, now);
+      osc.frequency.linearRampToValueAtTime(80, now + 0.12);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } catch (error) {
+      console.warn('Unable to play poison sound:', error);
+    }
+  }
+
+  public playMysteryEat() {
+    if (!this.isEnabled) return;
+    const ctx = this.initCtx();
+    if (!ctx) {
+      this.playFallback('eat');
+      return;
+    }
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(400, now);
+      osc.frequency.exponentialRampToValueAtTime(1000, now + 0.08);
+      osc.frequency.exponentialRampToValueAtTime(600, now + 0.16);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    } catch (error) {
+      console.warn('Unable to play mystery sound:', error);
+    }
+  }
+
   public playCrash() {
     if (!this.isEnabled) return;
     const ctx = this.initCtx();

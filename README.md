@@ -1,25 +1,41 @@
 # Snake Maze 2026
 
-A retro Nokia-style snake game featuring maze obstacles, bonus foods, dynamic career ranks, 19 unlockable achievements, customizable themes, and multiple control modes.
+A retro Nokia-style snake game featuring maze obstacles, bonus foods, dynamic career ranks, 19 unlockable achievements, customizable themes, and multiple game modes.
 
-## Platform
+## Platform Matrix
 
-This repository contains the responsive **Web** port (React + TypeScript + Tailwind CSS), with installable PWA and offline support targeted. It does not contain a native Android application or Gradle build.
+| Platform | Target Runtime | Ad & Monetization | Offline / PWA |
+| :--- | :--- | :--- | :--- |
+| **Google Play (Birincil)** | Android App / AAB (Capacitor Native) | Optional Rewarded AdMob | Full offline cache |
+| **PWA (Paralel)** | Mobile Web Browser (Vite PWA) | Ad-free (No-op) | Service Worker + Manifest |
+| **Masaüstü Tarayıcı** | Desktop Web (Chrome, Firefox, Safari) | Ad-free (No-op) | Keyboard WASD & Arrows |
 
 The viewport keeps pinch zoom disabled to prevent mobile browser zoom gestures from interfering with the game's full-screen directional touch controls. This limits a browser accessibility feature; players who need page zoom should use browser-level accessibility controls.
 
 Never commit `.env` files or credentials. If a real secret is accidentally committed, revoke and rotate it immediately with its provider, replace it in every affected environment, then remove it from repository history only through the repository's approved secret-removal procedure.
 
+## Game Modes & Balance Profiles
+
+- **Game Modes**:
+  - **Maze (Labirent)**: Dynamic 2x2 obstacles spawn as you level up, verified by BFS pathfinding. Supports custom user mazes.
+  - **Classic (Klasik)**: Authentic obstacle-free retro snake experience with wrapping borders.
+  - **Time Attack (Zamana Karşı)**: 60-second timer rush with HUD countdown timer.
+  - **Survival (Hayatta Kalma)**: High initial speed (220ms) and aggressive acceleration (+4 speed increment).
+- **Balance Profiles (DifficultyManager)**:
+  - **Modern (Balanced)**: Obstacles start at 40 points so early play is smooth.
+  - **Retro (Classic v1.0)**: Obstacles start at 10 points (original steep curve).
+
 ## Features
 
-- **Classic Nokia LCD Aesthetic**: Desktop console casing and optional LCD scanline/glare effects, with ten preset themes (including Nokia 3310, GameBoy 1989, Cyberpunk 2077, Pip-Boy, and Paper/Sketch).
+- **Classic Nokia LCD Aesthetic**: Desktop console casing and optional LCD scanline/glare effects, with ten 9-color preset themes (including Nokia 3310, GameBoy 1989, Cyberpunk 2077, Pip-Boy, and Paper/Sketch).
 - **Core Gameplay Mechanics**:
   - Grid wrapping borders.
   - Progressive speed acceleration (300ms down to 80ms min speed).
-  - 2x2 Maze obstacle generation at score thresholds.
-  - Timed Bonus Food with 5-second lifespan (+3 points, +2 segments growth).
+  - 2x2 Maze obstacle generation at score thresholds with BFS path accessibility.
+  - 6 Distinct Food Types: Regular, Bonus (+3), Golden (+5), Ice (Slows down), Poison (Removes segment), Mystery (Surprise effect).
+  - Timed Bonus Food with 5-second lifespan and rotating guide sparklers.
   - 3-second countdown on new game and resume; the first direction input skips it without turning.
-  - State autosave and resume functionality.
+  - State autosave and resume functionality across tab closures (beforeunload/pagehide).
 - **Multiple Control Modes**:
   - **Classic (Zik-zak)**: Authentic 2-button relative turning (Left/Down and Right/Up).
   - **D-Pad**: 4-way direct directional buttons.

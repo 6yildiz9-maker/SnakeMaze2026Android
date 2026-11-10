@@ -74,3 +74,41 @@ export const FOOD_DEFINITIONS: Record<FoodType, FoodDefinition> = {
     descriptionKey: 'food_mystery_desc',
   },
 };
+
+export interface FoodEffectResult {
+  scoreDelta: number;
+  speedDelta: number; // positive = slows down (adds ms to tick interval)
+  segmentsDelta: number; // -1 for poison
+  sound: 'regular' | 'bonus' | 'golden' | 'ice' | 'poison' | 'mystery';
+}
+
+export function applyFoodEffect(
+  type: FoodType,
+  random: () => number = Math.random
+): FoodEffectResult {
+  switch (type) {
+    case 'golden':
+      return { scoreDelta: 5, speedDelta: 0, segmentsDelta: 1, sound: 'golden' };
+    case 'ice':
+      // Slows down snake (adds 40ms to frame interval)
+      return { scoreDelta: 2, speedDelta: 40, segmentsDelta: 1, sound: 'ice' };
+    case 'poison':
+      // Penalty: -1 point, drops 1 tail segment
+      return { scoreDelta: -1, speedDelta: 0, segmentsDelta: -1, sound: 'poison' };
+    case 'mystery': {
+      const roll = random();
+      if (roll < 0.35) {
+        return { scoreDelta: 5, speedDelta: 0, segmentsDelta: 1, sound: 'golden' };
+      } else if (roll < 0.7) {
+        return { scoreDelta: 2, speedDelta: 40, segmentsDelta: 1, sound: 'ice' };
+      } else {
+        return { scoreDelta: 3, speedDelta: -10, segmentsDelta: 2, sound: 'bonus' };
+      }
+    }
+    case 'bonus':
+      return { scoreDelta: 3, speedDelta: 0, segmentsDelta: 2, sound: 'bonus' };
+    case 'regular':
+    default:
+      return { scoreDelta: 1, speedDelta: 0, segmentsDelta: 1, sound: 'regular' };
+  }
+}

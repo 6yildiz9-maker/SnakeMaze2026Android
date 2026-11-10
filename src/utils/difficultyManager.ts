@@ -114,6 +114,20 @@ export class DifficultyManager {
   public getLevel(score: number): number {
     return this.getConfig().getLevel(score);
   }
+
+  public getMinSpeed(): number {
+    return this.getConfig().minSpeed;
+  }
+
+  public rollFoodType(random: () => number, isClassic: boolean, score: number): 'regular' | 'golden' | 'ice' | 'poison' | 'mystery' {
+    if (isClassic || score < 15) return 'regular';
+    const r = random();
+    if (r < 0.08) return 'golden';
+    if (r < 0.16) return 'ice';
+    if (r < 0.24) return 'poison';
+    if (r < 0.32) return 'mystery';
+    return 'regular';
+  }
 }
 
 export const difficultyManager = new DifficultyManager('modern');

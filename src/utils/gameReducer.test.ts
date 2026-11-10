@@ -168,4 +168,112 @@ describe('gameReducer', () => {
       expect(next.snake).toHaveLength(5);
     });
   });
+
+  // ================= FR-13-R & FR-14-R GAME MODES & FOOD EFFECTS =================
+  describe('Game Modes & Food Effects (FR-13-R, FR-14-R)', () => {
+    it('classic mode never generates obstacles even after high scores', () => {
+      let state = createInitialGameState('classic');
+      expect(state.modeConfig.hasObstacles).toBe(false);
+      expect(state.obstacles).toHaveLength(0);
+
+      // Simulate eating food multiple times
+      for (let i = 0; i < 15; i++) {
+        state = {
+          ...state,
+          snake: [[5, 5], [5, 6], [5, 7]],
+          direction: 'UP',
+          food: [5, 4],
+          score: 50 + i * 2,
+        };
+        state = gameReducer(state, { type: 'TICK', randomSeed: 100 + i });
+        expect(state.obstacles).toHaveLength(0);
+      }
+    });
+
+    it('time_attack mode triggers victory preserving score when time expires', () => {
+      const state = {
+        ...createInitialGameState('time_attack'),
+        timeRemainingMs: 100,
+        score: 42,
+      };
+
+      const next = gameReducer(state, { type: 'TICK', randomSeed: 1, elapsedMs: 200 });
+      expect(next.timeRemainingMs).toBe(0);
+      expect(next.event?.type).toBe('victory');
+      expect(next.score).toBe(42);
+    });
+
+    it('survival mode uses higher speed increment (4)', () => {
+      const state = {
+        ...createInitialGameState('survival'),
+        snake: [[5, 5], [5, 6], [5, 7]] as [number, number][],
+        direction: 'UP' as const,
+        food: [5, 4] as [number, number],
+      };
+
+      const next = gameReducer(state, { type: 'TICK', randomSeed: 1 });
+      expect(next.event?.type).toBe('regular-food');
+      expect(next.gameSpeed).toBe(state.gameSpeed - 4);
+    });
+
+    it('handles golden food (+5 score, golden sound)', () => {
+      const state = {
+        ...createInitialGameState('maze'),
+        snake: [[5, 5], [5, 6], [5, 7]] as [number, number][],
+        direction: 'UP' as const,
+        food: [5, 4] as [number, number],
+        foodType: 'golden' as const,
+      };
+
+      const next = gameReducer(state, { type: 'TICK', randomSeed: 1 });
+      expect(next.score).toBe(5);
+      expect(next.event?.sound).toBe('golden');
+    });
+
+    it('handles ice food (+2 score, slows down game speed, ice sound)', () => {
+      const state = {
+        ...createInitialGameState('maze'),
+        snake: [[5, 5], [5, 6], [5, 7]] as [number, number][],
+        direction: 'UP' as const,
+        food: [5, 4] as [number, number],
+        foodType: 'ice' as const,
+        gameSpeed: 200,
+      };
+
+      const next = gameReducer(state, { type: 'TICK', randomSeed: 1 });
+      expect(next.score).toBe(2);
+      expect(next.event?.sound).toBe('ice');
+      // 200 - 2 (speedIncrement) + 40 (ice slowing delta) = 238
+      expect(next.gameSpeed).toBe(238);
+    });
+
+    it('handles poison food (-1 score, drops 1 segment, poison sound)', () => {
+      const state = {
+        ...createInitialGameState('maze'),
+        snake: [[5, 5], [5, 6], [5, 7], [5, 8], [5, 9]] as [number, number][],
+        direction: 'UP' as const,
+        food: [5, 4] as [number, number],
+        foodType: 'poison' as const,
+        score: 10,
+      };
+
+      const next = gameReducer(state, { type: 'TICK', randomSeed: 1 });
+      expect(next.score).toBe(9);
+      expect(next.event?.sound).toBe('poison');
+      expect(next.snake).toHaveLength(4); // 5 - 1 = 4
+    });
+
+    it('loads custom obstacles on RESET in maze mode', () => {
+      const customObs: [number, number][] = [[1, 1], [1, 2]];
+      const next = gameReducer(createInitialGameState('maze'), {
+        type: 'RESET',
+        mode: 'maze',
+        customObstacles: customObs,
+        randomSeed: 1,
+      });
+
+      expect(next.obstacles).toEqual(customObs);
+    });
+  });
 });
+

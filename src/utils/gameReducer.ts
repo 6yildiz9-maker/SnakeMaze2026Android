@@ -1,5 +1,7 @@
 import { GameLogic } from '../constants/gameConstants.ts';
-import { Direction, Point } from '../types.ts';
+import { Direction, FoodType, GameMode, Point } from '../types.ts';
+import { GAME_MODES, GameModeConfig } from '../constants/gameModes.ts';
+import { applyFoodEffect } from './foodTypes.ts';
 import { isPathAvailable } from './pathfinding.ts';
 import { difficultyManager, DifficultyProfile } from './difficultyManager.ts';
 
@@ -16,6 +18,10 @@ export interface GameEngineState {
   eventId: number;
   event: GameEvent | null;
   difficultyProfile?: DifficultyProfile;
+  mode: GameMode;
+  modeConfig: GameModeConfig;
+  foodType: FoodType;
+  timeRemainingMs?: number;
 }
 
 export interface GameEvent {
@@ -27,32 +33,43 @@ export interface GameEvent {
   diedToOwnTail: boolean;
   gameSpeed: number;
   gameSpeedBefore: number;
+  foodType?: FoodType;
+  sound?: 'regular' | 'bonus' | 'golden' | 'ice' | 'poison' | 'mystery';
 }
 
 export type GameAction =
-  | { type: 'RESET'; state: GameEngineState; randomSeed: number }
+  | { type: 'RESET'; state?: GameEngineState; randomSeed: number; mode?: GameMode; customObstacles?: Point[] }
   | { type: 'RESTORE'; state: GameEngineState }
   | { type: 'QUEUE_DIRECTION'; direction: Direction }
   | { type: 'CLEAR_BONUS' }
   | { type: 'SET_DIFFICULTY_PROFILE'; profile: DifficultyProfile }
-  | { type: 'TICK'; randomSeed: number };
+  | { type: 'TICK'; randomSeed: number; elapsedMs?: number };
 
-export function createInitialGameState(): GameEngineState {
+export function createInitialGameState(
+  mode: GameMode = 'maze',
+  customObstacles: Point[] = []
+): GameEngineState {
   const midX = Math.floor(GameLogic.DEFAULT_GRID_SIZE / 2);
   const midY = Math.floor(GameLogic.DEFAULT_GRID_HEIGHT / 2);
+  const modeConfig = GAME_MODES[mode] || GAME_MODES.maze;
+
   return {
     snake: [[midX, midY], [midX, midY + 1], [midX, midY + 2]],
     direction: 'UP',
     directionQueue: [],
     food: [midX, midY - 4],
     bonusFood: null,
-    obstacles: [],
+    obstacles: modeConfig.hasObstacles ? [...customObstacles] : [],
     score: 0,
-    gameSpeed: GameLogic.INITIAL_SPEED,
+    gameSpeed: modeConfig.initialSpeed ?? GameLogic.INITIAL_SPEED,
     lastNarrowCell: null,
     eventId: 0,
     event: null,
     difficultyProfile: difficultyManager.getProfile(),
+    mode,
+    modeConfig,
+    foodType: 'regular',
+    timeRemainingMs: modeConfig.timeLimitSeconds ? modeConfig.timeLimitSeconds * 1000 : undefined,
   };
 }
 
@@ -168,12 +185,29 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
   switch (action.type) {
     case 'RESET': {
       const random = nextRandom(action.randomSeed);
-      const initialState = { ...action.state };
-      initialState.food = freeCells(initialState.snake, [], [], random) ?? initialState.food;
+      const mode = action.mode ?? action.state?.mode ?? state.mode ?? 'maze';
+      const customObs = action.customObstacles ?? action.state?.obstacles ?? [];
+      const baseState = action.state ?? createInitialGameState(mode, customObs);
+      const modeConfig = GAME_MODES[mode] || GAME_MODES.maze;
+      const initialState = {
+        ...baseState,
+        mode,
+        modeConfig,
+        obstacles: modeConfig.hasObstacles ? [...customObs] : [],
+      };
+      initialState.food = freeCells(initialState.snake, initialState.obstacles, [], random) ?? initialState.food;
       return { ...initialState, directionQueue: [], eventId: state.eventId, event: null };
     }
     case 'RESTORE':
-      return { ...action.state, directionQueue: [], eventId: state.eventId, event: null };
+      return {
+        ...action.state,
+        mode: action.state.mode || 'maze',
+        modeConfig: action.state.modeConfig || GAME_MODES[action.state.mode || 'maze'],
+        foodType: action.state.foodType || 'regular',
+        directionQueue: [],
+        eventId: state.eventId,
+        event: null,
+      };
     case 'QUEUE_DIRECTION': {
       const lastDirection = state.directionQueue[state.directionQueue.length - 1] ?? state.direction;
       if (
@@ -191,6 +225,30 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
       return { ...state, difficultyProfile: action.profile };
     case 'TICK': {
       const random = nextRandom(action.randomSeed);
+
+      // FR-13-R: Time Attack countdown
+      let nextTimeRemaining = state.timeRemainingMs;
+      if (state.modeConfig.timeLimitSeconds !== undefined) {
+        const elapsed = action.elapsedMs ?? state.gameSpeed;
+        nextTimeRemaining = Math.max(
+          0,
+          (state.timeRemainingMs ?? state.modeConfig.timeLimitSeconds * 1000) - elapsed
+        );
+        if (nextTimeRemaining <= 0) {
+          return withEvent(
+            { ...state, timeRemainingMs: 0 },
+            {
+              type: 'victory',
+              score: state.score,
+              directionChanged: null,
+              wallHit: false,
+              narrowPass: false,
+              diedToOwnTail: false,
+            }
+          );
+        }
+      }
+
       const requestedDirection = state.directionQueue[0];
       const directionChanged =
         requestedDirection && isValidDirectionChange(state.direction, requestedDirection)
@@ -237,9 +295,6 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
       const growsThisTick = eatsRegularFood || eatsBonusFood;
 
       // BFR-18: Tail-Follow collision logic (P0)
-      // If the snake grows (eats food), tail remains in place -> entire snake is checked.
-      // If normal movement (does not eat), tail vacates this tick -> tail cell is SAFE!
-      // Only check body without the tail: snake.slice(0, -1)
       const bodyToCheck = growsThisTick ? state.snake : state.snake.slice(0, -1);
       const bodySet = new Set<string>();
       for (const [bx, by] of bodyToCheck) bodySet.add(`${bx},${by}`);
@@ -253,6 +308,7 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
         direction,
         directionQueue,
         lastNarrowCell,
+        timeRemainingMs: nextTimeRemaining,
       };
 
       if (hitOwnTail || hitObstacle) {
@@ -272,9 +328,12 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
         snake.push(tail, tail); // grows +2 segments
         const score = state.score + GameLogic.BONUS_POINTS;
 
+        // Obstacles only spawn in modes with hasObstacles === true
         const maxObs = difficultyManager.getMaxObstacles(score);
         const obstacles =
-          score >= difficultyManager.getObstacleThreshold() && state.obstacles.length < maxObs
+          state.modeConfig.hasObstacles &&
+          score >= difficultyManager.getObstacleThreshold() &&
+          state.obstacles.length < maxObs
             ? addObstacle(state.obstacles, snake, state.food, null, random)
             : state.obstacles;
 
@@ -293,34 +352,62 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
             wallHit,
             narrowPass,
             diedToOwnTail: false,
+            foodType: 'bonus',
+            sound: 'bonus',
           }
         );
       }
 
-      // Regular Food eaten
+      // Regular / Specialized Food eaten (FR-14-R)
       if (eatsRegularFood) {
-        const score = state.score + GameLogic.REGULAR_POINTS;
+        const effect = applyFoodEffect(state.foodType, random);
+        const score = Math.max(0, state.score + effect.scoreDelta);
+
+        // Adjust speed using mode speedIncrement + difficulty profile + food effect
+        const speedInc = state.modeConfig.speedIncrement;
+        const minSpeed = difficultyManager.getMinSpeed();
         const gameSpeed = Math.max(
-          GameLogic.MIN_SPEED,
-          state.gameSpeed - GameLogic.SPEED_INCREMENT
+          minSpeed,
+          state.gameSpeed - speedInc + effect.speedDelta
         );
 
+        // Adjust snake segments
+        if (effect.segmentsDelta < 0 && snake.length > 3) {
+          snake.pop(); // cancel initial growth
+          if (snake.length > 3) snake.pop(); // shrink 1 segment
+        } else if (effect.segmentsDelta > 1) {
+          const tail = state.snake[state.snake.length - 1];
+          for (let i = 1; i < effect.segmentsDelta; i++) {
+            snake.push(tail);
+          }
+        }
+
+        // Obstacles only spawn in modes with hasObstacles === true (FR-13-R)
         const maxObs = difficultyManager.getMaxObstacles(score);
         const obstacles =
-          score >= difficultyManager.getObstacleThreshold() && state.obstacles.length < maxObs
+          state.modeConfig.hasObstacles &&
+          score >= difficultyManager.getObstacleThreshold() &&
+          state.obstacles.length < maxObs
             ? addObstacle(state.obstacles, snake, state.food, state.bonusFood, random)
             : state.obstacles;
 
+        // Bonus Food only in modes with hasBonusFood === true
         const bonusInterval = difficultyManager.getBonusInterval();
         const bonusFood =
-          score > 0 && score % bonusInterval === 0
+          state.modeConfig.hasBonusFood &&
+          score > 0 &&
+          score % bonusInterval === 0
             ? freeCells(snake, obstacles, [state.food], random)
             : state.bonusFood;
+
+        // Roll next food type (FR-14-R)
+        const isClassic = !state.modeConfig.hasObstacles;
+        const nextFoodType = difficultyManager.rollFoodType(random, isClassic, score);
 
         const food = freeCells(snake, obstacles, [bonusFood], random);
         if (!food) {
           return withEvent(
-            { ...movedState, snake, obstacles, bonusFood, score, gameSpeed },
+            { ...movedState, snake, obstacles, bonusFood, score, gameSpeed, foodType: nextFoodType },
             {
               type: 'victory',
               score,
@@ -328,11 +415,13 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
               wallHit,
               narrowPass,
               diedToOwnTail: false,
+              foodType: state.foodType,
+              sound: effect.sound,
             }
           );
         }
         return withEvent(
-          { ...movedState, snake, obstacles, bonusFood, food, score, gameSpeed },
+          { ...movedState, snake, obstacles, bonusFood, food, score, gameSpeed, foodType: nextFoodType },
           {
             type: 'regular-food',
             score,
@@ -340,6 +429,8 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
             wallHit,
             narrowPass,
             diedToOwnTail: false,
+            foodType: state.foodType,
+            sound: effect.sound,
           },
           state.gameSpeed
         );

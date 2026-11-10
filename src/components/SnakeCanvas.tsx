@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Direction, Point, ThemeColors } from '../types.ts';
+import { Direction, FoodType, Point, ThemeColors } from '../types.ts';
 import { particleSystem } from '../utils/particles.ts';
 
 interface SnakeCanvasProps {
@@ -12,6 +12,7 @@ interface SnakeCanvasProps {
   bonusRemainingMs?: number;
   direction: Direction;
   colors: ThemeColors;
+  foodType?: FoodType;
   isPreview?: boolean;
   className?: string;
   smoothMotion?: boolean;
@@ -30,6 +31,7 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
   bonusRemainingMs = 5000,
   direction,
   colors,
+  foodType = 'regular',
   isPreview = false,
   className = '',
   smoothMotion = false,
@@ -180,22 +182,22 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
         );
       }
 
-      // 2. Draw bonus food or regular food
+      // 2. Draw bonus food or regular/specialized food (FR-14-R, FR-03-R)
       if (bonusFood) {
         const [bx, by] = bonusFood;
         const midX = (bx + 0.5) * cellSize;
         const midY = (by + 0.5) * cellSize;
         const radius = cellSize * 0.46;
 
-        // Flashing in last 1.5s
+        // Flashing in last 1.5s (static if prefers-reduced-motion)
         const isUrgent = bonusRemainingMs <= 1500;
-        const flashAlpha = isUrgent ? Math.sin(now / 80) * 0.35 + 0.65 : 1;
+        const flashAlpha = isUrgent && !prefersReducedMotion ? Math.sin(now / 80) * 0.35 + 0.65 : 1;
 
         ctx.save();
         ctx.globalAlpha = flashAlpha;
 
-        // 8-bit rotating guide sparklers around bonus food
-        const angleOffset = (now / 400) % (Math.PI * 2);
+        // 8-bit rotating guide sparklers around bonus food (static if prefers-reduced-motion)
+        const angleOffset = prefersReducedMotion ? 0 : (now / 400) % (Math.PI * 2);
         ctx.strokeStyle = colors.bonusOuter || '#FFD700';
         ctx.lineWidth = 1.5;
         for (let i = 0; i < 4; i++) {
@@ -222,14 +224,95 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
         ctx.restore();
       } else if (food) {
         const [fx, fy] = food;
-        drawRoundedRect(
-          fx * cellSize + 2,
-          fy * cellSize + 2,
-          cellSize - 4,
-          cellSize - 4,
-          6,
-          colors.food
-        );
+        const midX = (fx + 0.5) * cellSize;
+        const midY = (fx + 0.5) * cellSize;
+
+        switch (foodType) {
+          case 'golden': {
+            // 5-point star
+            const spikes = 5;
+            const outerR = cellSize * 0.45;
+            const innerR = cellSize * 0.22;
+            let rot = (Math.PI / 2) * 3;
+            const step = Math.PI / spikes;
+            ctx.beginPath();
+            ctx.moveTo(midX, midY - outerR);
+            for (let i = 0; i < spikes; i++) {
+              ctx.lineTo(midX + Math.cos(rot) * outerR, midY + Math.sin(rot) * outerR);
+              rot += step;
+              ctx.lineTo(midX + Math.cos(rot) * innerR, midY + Math.sin(rot) * innerR);
+              rot += step;
+            }
+            ctx.lineTo(midX, midY - outerR);
+            ctx.closePath();
+            ctx.fillStyle = '#FFD700';
+            ctx.fill();
+            ctx.strokeStyle = '#B8860B';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            break;
+          }
+          case 'ice': {
+            // Diamond (rotated square)
+            const r = cellSize * 0.42;
+            ctx.beginPath();
+            ctx.moveTo(midX, midY - r);
+            ctx.lineTo(midX + r, midY);
+            ctx.lineTo(midX, midY + r);
+            ctx.lineTo(midX - r, midY);
+            ctx.closePath();
+            ctx.fillStyle = '#00E5FF';
+            ctx.fill();
+            ctx.strokeStyle = '#0097A7';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            break;
+          }
+          case 'poison': {
+            // Equilateral triangle
+            const r = cellSize * 0.44;
+            ctx.beginPath();
+            ctx.moveTo(midX, midY - r);
+            ctx.lineTo(midX + r, midY + r * 0.85);
+            ctx.lineTo(midX - r, midY + r * 0.85);
+            ctx.closePath();
+            ctx.fillStyle = '#9C27B0';
+            ctx.fill();
+            ctx.strokeStyle = '#4A148C';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            break;
+          }
+          case 'mystery': {
+            // Rounded badge with ?
+            drawRoundedRect(
+              fx * cellSize + 2,
+              fy * cellSize + 2,
+              cellSize - 4,
+              cellSize - 4,
+              5,
+              '#FF9800',
+              '#E65100'
+            );
+            ctx.fillStyle = '#FFFFFF';
+            ctx.font = `bold ${Math.floor(cellSize * 0.65)}px monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('?', midX, midY + 1);
+            break;
+          }
+          case 'regular':
+          default:
+            drawRoundedRect(
+              fx * cellSize + 2,
+              fy * cellSize + 2,
+              cellSize - 4,
+              cellSize - 4,
+              6,
+              colors.food
+            );
+            break;
+        }
       }
 
       // 3. Draw snake segments with squash & stretch and bite pulse (FR-03)
