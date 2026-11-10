@@ -27,11 +27,14 @@ export const STORAGE_KEYS = {
   savedBonusFoodY: 'saved_bonus_food_y',
   savedBonusFoodRemaining: 'saved_bonus_food_remaining',
   savedGameRunning: 'saved_is_game_running',
+  savedMode: 'saved_mode',
+  savedTimeRemaining: 'saved_time_remaining_ms',
   vibrationEnabled: 'vibration_enabled',
   buttonSize: 'button_size',
   handOrientation: 'hand_orientation',
   difficultyProfile: 'difficulty_profile',
   selectedMode: 'selected_mode',
+  selectedCustomMaze: 'selected_custom_maze',
   careerData: 'career_data',
   dailyQuests: 'daily_quests',
   customMazes: 'custom_mazes',
@@ -40,6 +43,22 @@ export const STORAGE_KEYS = {
   usedPresetThemes: 'used_preset_themes',
   achievementPrefix: 'achievement_',
 } as const;
+
+export function getModeHighScore(mode: string): number {
+  const specific = storage.getNumber(`high_score_${mode}`, -1);
+  if (specific >= 0) return specific;
+  if (mode === 'maze') {
+    return storage.getNumber(STORAGE_KEYS.highScore, 0);
+  }
+  return 0;
+}
+
+export function setModeHighScore(mode: string, score: number): void {
+  storage.setItem(`high_score_${mode}`, String(score));
+  if (mode === 'maze') {
+    storage.setItem(STORAGE_KEYS.highScore, String(score));
+  }
+}
 
 function getStorage(): Storage | null {
   if (typeof window === 'undefined') return null;

@@ -41,9 +41,9 @@ class AdService implements AdServiceContract {
       }
     }
 
-    // Web simulation / support developer flow
-    onReward();
-    return true;
+    // Web/PWA build: ads are no-op; no fake rewards triggered
+    onNotReady?.();
+    return false;
   }
 }
 

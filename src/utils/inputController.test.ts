@@ -54,4 +54,16 @@ describe('InputController', () => {
     expect(controller.handleDirection('LEFT')).toBe(true);
     expect(controller.handleDirection('UP')).toBe(false); // exceeds 3
   });
+
+  it('handles zig-zag button input directly via controller layer', () => {
+    const controller = new InputController('UP', 'classic');
+    const dir = controller.handleZigZag('left');
+    expect(dir).toBe('LEFT');
+    expect(controller.popNextDirection()).toBe('LEFT');
+
+    controller.setCurrentDirection('LEFT');
+    const dir2 = controller.handleZigZag('left');
+    expect(dir2).toBe('DOWN');
+    expect(controller.popNextDirection()).toBe('DOWN');
+  });
 });

@@ -132,6 +132,78 @@ export const CareerModal: React.FC<CareerModalProps> = ({
             </div>
           </div>
 
+          {/* Extended Career Analytics (FR-17-R) */}
+          <div className="bg-black/5 p-3 rounded-xl border border-[#3A3F44]/20 space-y-2">
+            <div className="text-xs font-bold font-mono-retro uppercase tracking-wider text-[#3A3F44] border-b border-[#3A3F44]/20 pb-1 flex justify-between">
+              <span>{lang === 'tr' ? 'KARİYER DETAYLARI' : 'CAREER ANALYTICS'}</span>
+              <span className="text-[10px] font-normal">{careerStats.mostUsedTheme}</span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 text-center">
+              <div className="bg-white/40 p-2 rounded-lg border border-[#3A3F44]/15">
+                <div className="text-[10px] font-bold font-mono-retro opacity-75">
+                  {lang === 'tr' ? 'BONUS BAŞARISI' : 'BONUS SUCCESS'}
+                </div>
+                <div className="text-base font-black font-mono-retro text-[#1E2328]">
+                  %{careerStats.bonusSuccessRate}{' '}
+                  <span className="text-[10px] font-bold opacity-70">
+                    ({careerStats.bonusFoodsCaught}/{careerStats.bonusFoodsSpawned})
+                  </span>
+                </div>
+              </div>
+
+              <div className="bg-white/40 p-2 rounded-lg border border-[#3A3F44]/15">
+                <div className="text-[10px] font-bold font-mono-retro opacity-75">
+                  {lang === 'tr' ? 'GÜNLÜK / HAFTALIK' : 'DAILY / WEEKLY'}
+                </div>
+                <div className="text-base font-black font-mono-retro text-[#1E2328]">
+                  {careerStats.dailyRecord.score} / {careerStats.weeklyRecord.score}
+                </div>
+              </div>
+            </div>
+
+            {/* Mode High Scores (FR-13-R) */}
+            <div className="pt-1">
+              <div className="text-[10px] font-bold font-mono-retro opacity-75 mb-1">
+                {lang === 'tr' ? 'MOD BAZLI REKORLAR:' : 'MODE RECORDS:'}
+              </div>
+              <div className="grid grid-cols-4 gap-1.5 text-center">
+                <div className="bg-white/50 p-1.5 rounded-md border border-[#3A3F44]/15">
+                  <div className="text-[9px] font-bold font-mono-retro opacity-75 uppercase">
+                    {lang === 'tr' ? 'Labirent' : 'Maze'}
+                  </div>
+                  <div className="text-sm font-black font-mono-retro text-[#1E2328]">
+                    {careerStats.modeHighScores.maze}
+                  </div>
+                </div>
+                <div className="bg-white/50 p-1.5 rounded-md border border-[#3A3F44]/15">
+                  <div className="text-[9px] font-bold font-mono-retro opacity-75 uppercase">
+                    {lang === 'tr' ? 'Klasik' : 'Classic'}
+                  </div>
+                  <div className="text-sm font-black font-mono-retro text-[#1E2328]">
+                    {careerStats.modeHighScores.classic}
+                  </div>
+                </div>
+                <div className="bg-white/50 p-1.5 rounded-md border border-[#3A3F44]/15">
+                  <div className="text-[9px] font-bold font-mono-retro opacity-75 uppercase">
+                    {lang === 'tr' ? 'Zamana K.' : 'Time Att.'}
+                  </div>
+                  <div className="text-sm font-black font-mono-retro text-[#1E2328]">
+                    {careerStats.modeHighScores.time_attack}
+                  </div>
+                </div>
+                <div className="bg-white/50 p-1.5 rounded-md border border-[#3A3F44]/15">
+                  <div className="text-[9px] font-bold font-mono-retro opacity-75 uppercase">
+                    {lang === 'tr' ? 'Hayatta K.' : 'Survival'}
+                  </div>
+                  <div className="text-sm font-black font-mono-retro text-[#1E2328]">
+                    {careerStats.modeHighScores.survival}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Rank Progress Bar */}
           <div className="bg-white/40 p-3 rounded-xl border border-[#3A3F44]/20">
             <RankProgress score={highScore} lang={lang} />

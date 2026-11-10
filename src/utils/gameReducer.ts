@@ -61,7 +61,7 @@ export function createInitialGameState(
     bonusFood: null,
     obstacles: modeConfig.hasObstacles ? [...customObstacles] : [],
     score: 0,
-    gameSpeed: modeConfig.initialSpeed ?? GameLogic.INITIAL_SPEED,
+    gameSpeed: modeConfig.initialSpeed ?? difficultyManager.getConfig().initialSpeed,
     lastNarrowCell: null,
     eventId: 0,
     event: null,

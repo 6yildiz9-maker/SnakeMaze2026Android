@@ -1,13 +1,15 @@
 import React from 'react';
 import { ArrowLeft, Zap, Sparkles } from 'lucide-react';
-import { ControlMode, Direction, Language, Point, ThemeColors, ButtonSize, HandOrientation } from '../types.ts';
+import { ControlMode, Direction, Language, Point, ThemeColors, ButtonSize, HandOrientation, GameMode, FoodType } from '../types.ts';
 import { GameLogic } from '../constants/gameConstants.ts';
 import { SnakeCanvas } from './SnakeCanvas.tsx';
 import { Controls } from './Controls.tsx';
 import { t } from '../utils/translations.ts';
+import { Clock } from 'lucide-react';
 
 interface GameScreenProps {
   lang: Language;
+  mode?: GameMode;
   controlMode: ControlMode;
   buttonSize: ButtonSize;
   handOrientation: HandOrientation;
@@ -16,6 +18,8 @@ interface GameScreenProps {
   food: Point;
   bonusFood: Point | null;
   bonusRemainingMs?: number;
+  timeRemainingMs?: number;
+  foodType?: FoodType;
   direction: Direction;
   colors: ThemeColors;
   score: number;
@@ -48,6 +52,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   food,
   bonusFood,
   bonusRemainingMs = 0,
+  timeRemainingMs,
+  foodType = 'regular',
   direction,
   colors,
   score,
@@ -93,13 +99,27 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           <ArrowLeft className="w-6 h-6 stroke-[3]" />
         </button>
 
-        {/* Center: Score & Level */}
+        {/* Center: Score & Level & Optional Time Remaining */}
         <div className="flex flex-col items-center">
           <div className="text-2xl sm:text-3xl font-black font-mono-retro tracking-wider text-[#1E2328] leading-none">
             {t(lang, 'score', { score })}
           </div>
-          <div className="text-[11px] font-bold font-mono-retro text-[#3A3F44]/80 tracking-wide mt-0.5">
-            {t(lang, 'level_label', { level })}
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[11px] font-bold font-mono-retro text-[#3A3F44]/80 tracking-wide">
+              {t(lang, 'level_label', { level })}
+            </span>
+            {timeRemainingMs !== undefined && (
+              <span
+                className={`text-[11px] font-black font-mono-retro px-1.5 py-0.2 rounded border flex items-center gap-0.5 ${
+                  timeRemainingMs <= 10000
+                    ? 'bg-red-500/20 text-red-700 border-red-500/40 animate-pulse'
+                    : 'bg-black/10 text-[#1E2328] border-black/20'
+                }`}
+              >
+                <Clock className="w-3 h-3" />
+                {Math.ceil(timeRemainingMs / 1000)}s
+              </span>
+            )}
           </div>
         </div>
 
@@ -121,6 +141,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           food={food}
           bonusFood={bonusFood}
           bonusRemainingMs={bonusRemainingMs}
+          foodType={foodType}
           direction={direction}
           colors={colors}
           smoothMotion={smoothMotionEnabled}

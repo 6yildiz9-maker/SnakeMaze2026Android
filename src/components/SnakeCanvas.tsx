@@ -487,6 +487,7 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
     rankDecorationsEnabled,
     rankDecoration,
     prefersReducedMotion,
+    foodType,
   ]);
 
   return (

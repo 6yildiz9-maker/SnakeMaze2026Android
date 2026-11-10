@@ -3,20 +3,26 @@ import { GameMode, Language } from '../types.ts';
 import { GAME_MODES } from '../constants/gameModes.ts';
 import { t } from '../utils/translations.ts';
 import { soundManager } from '../utils/soundManager.ts';
-import { Grid, Compass, Clock, Flame } from 'lucide-react';
+import { mazeEditorService } from '../utils/mazeEditor.ts';
+import { Grid, Compass, Clock, Flame, MapPin } from 'lucide-react';
 
 interface ModeSelectProps {
   selectedMode: GameMode;
   onSelectMode: (mode: GameMode) => void;
+  selectedCustomMazeId?: string;
+  onSelectCustomMaze?: (mazeId: string) => void;
   lang: Language;
 }
 
 export const ModeSelect: React.FC<ModeSelectProps> = ({
   selectedMode,
   onSelectMode,
+  selectedCustomMazeId = '',
+  onSelectCustomMaze,
   lang,
 }) => {
   const modes: GameMode[] = ['maze', 'classic', 'time_attack', 'survival'];
+  const customMazes = mazeEditorService.getCustomMazes();
 
   const getIcon = (mode: GameMode) => {
     switch (mode) {
@@ -60,6 +66,34 @@ export const ModeSelect: React.FC<ModeSelectProps> = ({
           );
         })}
       </div>
+
+      {/* Custom Maze Selection (FR-13-R) when Maze mode is active */}
+      {selectedMode === 'maze' && customMazes.length > 0 && onSelectCustomMaze && (
+        <div className="pt-1 animate-fadeIn">
+          <div className="flex items-center gap-1 text-[10px] font-bold font-mono-retro text-[#3A3F44]/80 px-1 mb-0.5">
+            <MapPin className="w-3 h-3 text-[#3A3F44]" />
+            <span>{lang === 'tr' ? 'HARİTA SEÇİMİ:' : 'MAP SELECTION:'}</span>
+          </div>
+          <select
+            value={selectedCustomMazeId}
+            onChange={(e) => {
+              soundManager.playButtonClick();
+              onSelectCustomMaze(e.target.value);
+            }}
+            aria-label={lang === 'tr' ? 'Harita Seçimi' : 'Map Selection'}
+            className="w-full p-1.5 text-xs font-mono-retro font-bold bg-white/70 border-2 border-[#3A3F44]/30 rounded-lg text-[#3A3F44] focus:outline-none focus:border-[#3A3F44] cursor-pointer"
+          >
+            <option value="">
+              {lang === 'tr' ? 'Varsayılan (Dinamik Labirent)' : 'Default (Dynamic Maze)'}
+            </option>
+            {customMazes.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.name} ({m.obstacles.length} {lang === 'tr' ? 'engel' : 'blocks'})
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
     </div>
   );
 };

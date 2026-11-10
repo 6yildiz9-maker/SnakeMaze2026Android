@@ -11,6 +11,8 @@ interface MenuScreenProps {
   hasSavedGame: boolean;
   selectedMode: GameMode;
   onSelectMode: (mode: GameMode) => void;
+  selectedCustomMazeId?: string;
+  onSelectCustomMaze?: (mazeId: string) => void;
   onToggleLang: () => void;
   onNewGame: () => void;
   onResume: () => void;
@@ -25,6 +27,8 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
   hasSavedGame,
   selectedMode,
   onSelectMode,
+  selectedCustomMazeId,
+  onSelectCustomMaze,
   onToggleLang,
   onNewGame,
   onResume,
@@ -53,8 +57,14 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
       </div>
     </div>
 
-    {/* Mode Selector */}
-    <ModeSelect selectedMode={selectedMode} onSelectMode={onSelectMode} lang={lang} />
+    {/* Mode Selector with Custom Maze support */}
+    <ModeSelect
+      selectedMode={selectedMode}
+      onSelectMode={onSelectMode}
+      selectedCustomMazeId={selectedCustomMazeId}
+      onSelectCustomMaze={onSelectCustomMaze}
+      lang={lang}
+    />
 
     <div className="w-full space-y-2.5 max-w-xs mb-3">
       <button type="button" onClick={onNewGame} className="menu-button">
@@ -85,7 +95,7 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
         {t(lang, 'support_developer')}
       </span>
       <a
-        href="https://github.com/6yildiz9-maker/SnakeMaze2026"
+        href="https://github.com/6yildiz9-maker/SnakeMaze2026Android"
         target="_blank"
         rel="noreferrer"
         onClick={() => soundManager.playButtonClick()}

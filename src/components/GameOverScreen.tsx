@@ -1,7 +1,8 @@
 import React from 'react';
 import { Home, RotateCcw, Share2 } from 'lucide-react';
-import { Language } from '../types.ts';
+import { Language, GameMode } from '../types.ts';
 import { t } from '../utils/translations.ts';
+import { GAME_MODES } from '../constants/gameModes.ts';
 import { RankProgress } from './RankProgress.tsx';
 
 interface GameOverScreenProps {
@@ -10,6 +11,7 @@ interface GameOverScreenProps {
   rank: string;
   won: boolean;
   isNewHighScore: boolean;
+  mode?: GameMode;
   onTryAgain: () => void;
   onShare: () => void;
   onHome: () => void;
@@ -21,6 +23,7 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
   rank,
   won,
   isNewHighScore,
+  mode,
   onTryAgain,
   onShare,
   onHome,
@@ -36,8 +39,15 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
       {isNewHighScore && (
         <div className="text-lg font-black font-mono-retro text-[#2E7D32]">{t(lang, 'new_high_score')}</div>
       )}
-      <div className="text-lg font-bold font-mono-retro text-[#2E7D32] bg-[#2E7D32]/10 py-1 px-4 rounded-full inline-block border border-[#2E7D32]/30">
-        {t(lang, 'rank_label', { rank })}
+      <div className="flex items-center justify-center gap-2 flex-wrap">
+        <div className="text-sm font-bold font-mono-retro text-[#2E7D32] bg-[#2E7D32]/10 py-1 px-3 rounded-full border border-[#2E7D32]/30">
+          {t(lang, 'rank_label', { rank })}
+        </div>
+        {mode && (
+          <div className="text-sm font-bold font-mono-retro text-[#3A3F44] bg-black/10 py-1 px-3 rounded-full border border-[#3A3F44]/20">
+            {t(lang, GAME_MODES[mode].nameKey)}
+          </div>
+        )}
       </div>
       <RankProgress score={score} lang={lang} />
     </div>
