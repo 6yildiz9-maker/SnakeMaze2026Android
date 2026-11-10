@@ -27,6 +27,16 @@ describe('gameReducer', () => {
     expect(next.snake[0]).toEqual([10, 9]);
   });
 
+  it('queues rapid valid turns and rejects duplicate pending directions', () => {
+    const initial = createInitialGameState();
+    const right = gameReducer(initial, { type: 'QUEUE_DIRECTION', direction: 'RIGHT' });
+    const down = gameReducer(right, { type: 'QUEUE_DIRECTION', direction: 'DOWN' });
+    const duplicate = gameReducer(down, { type: 'QUEUE_DIRECTION', direction: 'DOWN' });
+
+    expect(down.directionQueue).toEqual(['RIGHT', 'DOWN']);
+    expect(duplicate).toBe(down);
+  });
+
   it('scores and grows by one segment when regular food is eaten', () => {
     const state = {
       ...createInitialGameState(),
@@ -288,6 +298,23 @@ describe('gameReducer', () => {
 
       expect(next.obstacles).toEqual(customObs);
     });
+
+    it('starts on a custom maze without placing the snake or food in a blocked cell', () => {
+      const customObs: [number, number][] = [[3, 3], [4, 3], [4, 4]];
+      const next = gameReducer(createInitialGameState('maze'), {
+        type: 'RESET',
+        mode: 'maze',
+        customObstacles: customObs,
+        randomSeed: 17,
+      });
+
+      expect(next.obstacles).toEqual(customObs);
+      expect(next.snake.some(([x, y]) => customObs.some(([ox, oy]) => ox === x && oy === y))).toBe(false);
+      expect(customObs).not.toContainEqual(next.food);
+
+      const firstMove = gameReducer(next, { type: 'TICK', randomSeed: 18 });
+      expect(firstMove.event?.type).not.toBe('collision');
+      expect(firstMove.snake[0]).toEqual([10, 9]);
+    });
   });
 });
-

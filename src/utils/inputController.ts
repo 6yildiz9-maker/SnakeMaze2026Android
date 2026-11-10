@@ -38,6 +38,10 @@ export class InputController {
     this.currentDirection = dir;
   }
 
+  public setPendingDirections(directions: Direction[]): void {
+    this.queue = directions.slice(0, this.maxQueueSize);
+  }
+
   public setControlMode(mode: ControlMode): void {
     this.mode = mode;
   }
@@ -64,7 +68,7 @@ export class InputController {
     }
 
     const lastDirection = this.queue[this.queue.length - 1] ?? this.currentDirection;
-    if (!isValidDirectionChange(lastDirection, dir)) {
+    if (lastDirection === dir || !isValidDirectionChange(lastDirection, dir)) {
       return false;
     }
 

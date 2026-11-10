@@ -6,6 +6,7 @@ import { t } from '../utils/translations.ts';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility.ts';
 import { STORAGE_KEYS, storage } from '../utils/storage.ts';
 import { PRESET_THEMES } from '../constants/gameConstants.ts';
+import { isCapacitor } from '../utils/platform.ts';
 import { Volume2, VolumeX, Shuffle, X, Palette, Sliders, Smartphone, Gauge, Move } from 'lucide-react';
 
 interface SettingsModalProps {
@@ -34,6 +35,7 @@ interface SettingsModalProps {
   onToggleMusic: (enabled: boolean) => void;
   rankDecorationsEnabled: boolean;
   onToggleRankDecorations: (enabled: boolean) => void;
+  onShowPrivacyOptions: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
@@ -62,6 +64,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onToggleMusic,
   rankDecorationsEnabled,
   onToggleRankDecorations,
+  onShowPrivacyOptions,
 }) => {
   const dialogRef = useDialogAccessibility(isOpen, onClose);
   if (!isOpen) return null;
@@ -156,6 +159,15 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {isCapacitor() && (
+            <button
+              type="button"
+              onClick={onShowPrivacyOptions}
+              className="w-full rounded-xl border border-[#3A3F44]/20 bg-white/40 p-3.5 text-left font-bold font-mono-retro"
+            >
+              {t(lang, 'ad_privacy_options')}
+            </button>
+          )}
           {/* Audio & Haptics Section */}
           <div className="p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 space-y-3">
             <div className="text-xs font-bold font-mono-retro uppercase tracking-wider text-[#3A3F44]/80">

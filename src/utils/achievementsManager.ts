@@ -37,6 +37,12 @@ export const ALL_ACHIEVEMENTS: AchievementItem[] = [
   { id: 'ouroboros', nameKey: 'ach_ouroboros', descKey: 'ach_desc_ouroboros', category: 'hidden' },
   { id: 'so_close', nameKey: 'ach_so_close', descKey: 'ach_desc_so_close', category: 'hidden' },
   { id: 'fast_and_furious', nameKey: 'ach_fast_and_furious', descKey: 'ach_desc_fast_and_furious', category: 'hidden' },
+  { id: 'golden_bounty', nameKey: 'ach_golden_bounty', descKey: 'ach_desc_golden_bounty', category: 'skill' },
+  { id: 'ice_breaker', nameKey: 'ach_ice_breaker', descKey: 'ach_desc_ice_breaker', category: 'skill' },
+  { id: 'toxic_taster', nameKey: 'ach_toxic_taster', descKey: 'ach_desc_toxic_taster', category: 'skill' },
+  { id: 'mystery_master', nameKey: 'ach_mystery_master', descKey: 'ach_desc_mystery_master', category: 'skill' },
+  { id: 'custom_cartographer', nameKey: 'ach_custom_cartographer', descKey: 'ach_desc_custom_cartographer', category: 'cumulative' },
+  { id: 'long_serpent', nameKey: 'ach_long_serpent', descKey: 'ach_desc_long_serpent', category: 'milestone' },
 ];
 
 export class AchievementsManager {
@@ -115,6 +121,24 @@ export class AchievementsManager {
     if (gameData.diedFast) {
       this.unlock('fast_and_furious', onUnlock);
     }
+    if ((gameData.goldenFoodsThisGame ?? 0) >= AchievementThresholds.SPECIAL_FOOD_STREAK) {
+      this.unlock('golden_bounty', onUnlock);
+    }
+    if ((gameData.iceFoodsThisGame ?? 0) >= AchievementThresholds.SPECIAL_FOOD_STREAK) {
+      this.unlock('ice_breaker', onUnlock);
+    }
+    if ((gameData.poisonFoodsThisGame ?? 0) >= AchievementThresholds.SPECIAL_FOOD_STREAK) {
+      this.unlock('toxic_taster', onUnlock);
+    }
+    if ((gameData.mysteryFoodsThisGame ?? 0) >= AchievementThresholds.MYSTERY_FOOD_STREAK) {
+      this.unlock('mystery_master', onUnlock);
+    }
+    if (gameData.playedCustomMaze) {
+      this.unlock('custom_cartographer', onUnlock);
+    }
+    if ((gameData.longestSnakeThisGame ?? 0) >= AchievementThresholds.LONG_SERPENT_LENGTH) {
+      this.unlock('long_serpent', onUnlock);
+    }
   }
 
   public checkScoreAchievements(score: number, onUnlock?: (ach: AchievementItem) => void) {
@@ -139,6 +163,9 @@ export class AchievementsManager {
   }
 
   public getRankKey(score: number): keyof typeof import('./translations.ts').translations['en'] {
+    if (score > RankThresholds.INFINITY_SERPENT) return 'rank_infinity_serpent';
+    if (score > RankThresholds.COSMIC_COIL) return 'rank_cosmic_coil';
+    if (score > RankThresholds.STAR_SERPENT) return 'rank_star_serpent';
     if (score > RankThresholds.LEGENDARY) return 'rank_mythical_leviathan';
     if (score > RankThresholds.COBRA_KING) return 'rank_lord_of_serpents';
     if (score > RankThresholds.MAZE_MASTER) return 'rank_cobra_king';

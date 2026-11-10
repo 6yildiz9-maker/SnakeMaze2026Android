@@ -15,18 +15,19 @@ interface ToastProps {
 
 export const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
   const activeToast = toast[0] ?? null;
+  const activeToastId = activeToast?.id;
   useEffect(() => {
-    if (!activeToast) return;
+    if (!activeToastId) return;
     const timer = setTimeout(() => {
       onDismiss();
-    }, 2800);
+    }, 2200);
     return () => clearTimeout(timer);
-  }, [activeToast, onDismiss]);
+  }, [activeToastId, onDismiss]);
 
   if (!activeToast) return null;
 
   return (
-    <div role="status" aria-live="polite" className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none animate-bounce-short">
+    <div role="status" aria-live="polite" className="fixed top-[calc(env(safe-area-inset-top)+5rem)] left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4 pointer-events-none animate-bounce-short">
       <div className="bg-[#1E2328] text-[#C7F0D8] border-2 border-[#C7F0D8] rounded-xl shadow-2xl p-3.5 flex items-center gap-3 backdrop-blur-md">
         <div className="p-2 bg-[#C7F0D8]/10 rounded-lg shrink-0">
           {activeToast.type === 'achievement' && <Award className="w-6 h-6 text-[#FFD700]" />}

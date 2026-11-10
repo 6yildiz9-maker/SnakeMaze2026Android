@@ -8,10 +8,11 @@ import { ArrowLeft, Save, Trash2, CheckCircle2, AlertCircle } from 'lucide-react
 
 interface MazeEditorScreenProps {
   onBack: () => void;
+  onPlayMaze: (mazeId: string) => void;
   lang: Language;
 }
 
-export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, lang }) => {
+export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, onPlayMaze, lang }) => {
   const [mazeName, setMazeName] = useState(lang === 'tr' ? 'Özel Labirent' : 'Custom Maze');
   const [obstacles, setObstacles] = useState<Point[]>([]);
   const [statusMessage, setStatusMessage] = useState<{ text: string; isError: boolean } | null>(null);
@@ -26,7 +27,10 @@ export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, lang
 
   const toggleCell = (x: number, y: number) => {
     // Cannot place obstacle on start head or food
-    if ((x === startHead[0] && y === startHead[1]) || (x === startFood[0] && y === startFood[1])) {
+    if (
+      (x === startHead[0] && y >= startHead[1] && y <= startHead[1] + 2) ||
+      (x === startFood[0] && y === startFood[1])
+    ) {
       return;
     }
     soundManager.playButtonClick();
@@ -57,11 +61,15 @@ export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, lang
     }
   };
 
-  const handleSave = () => {
+  const handleSave = (playAfterSaving = false) => {
     soundManager.playButtonClick();
     const res = mazeEditorService.saveMaze(mazeName, obstacles);
     if (res.success && res.maze) {
       soundManager.playBonusEat();
+      if (playAfterSaving) {
+        onPlayMaze(res.maze.id);
+        return;
+      }
       const code = mazeEditorService.exportToBase64(res.maze);
       navigator.clipboard?.writeText(code).catch(() => {});
       setStatusMessage({
@@ -171,7 +179,7 @@ export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, lang
       )}
 
       {/* Action Buttons */}
-      <div className="w-full flex items-center gap-2 mt-3">
+      <div className="w-full grid grid-cols-2 items-center gap-2 mt-3">
         <button
           type="button"
           onClick={handleTestSolve}
@@ -183,11 +191,18 @@ export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, lang
 
         <button
           type="button"
-          onClick={handleSave}
+          onClick={() => handleSave()}
           className="flex-1 py-2.5 px-3 rounded-xl border-2 border-[#3A3F44] bg-[#3A3F44] text-[#C7F0D8] font-bold font-mono-retro text-sm hover:bg-black transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
         >
           <Save className="w-4 h-4" />
           {lang === 'tr' ? 'Kaydet & Paylaş' : 'Save & Share'}
+        </button>
+        <button
+          type="button"
+          onClick={() => handleSave(true)}
+          className="col-span-2 py-2.5 px-3 rounded-xl border-2 border-[#2E7D32] bg-[#2E7D32] text-white font-bold font-mono-retro text-sm hover:bg-[#1B5E20] transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md"
+        >
+          {lang === 'tr' ? 'Kaydet ve Oyna' : 'Save & Play'}
         </button>
       </div>
     </div>

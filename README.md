@@ -10,6 +10,8 @@ A retro Nokia-style snake game featuring maze obstacles, bonus foods, dynamic ca
 | **PWA (Paralel)** | Mobile Web Browser (Vite PWA) | Ad-free (No-op) | Service Worker + Manifest |
 | **Masaüstü Tarayıcı** | Desktop Web (Chrome, Firefox, Safari) | Ad-free (No-op) | Keyboard WASD & Arrows |
 
+The Android/Tablet application is the primary Play distribution. The standalone, ad-free PWA is maintained separately at [SnakeMaze2026Web](https://github.com/6yildiz9-maker/SnakeMaze2026Web).
+
 The viewport keeps pinch zoom disabled to prevent mobile browser zoom gestures from interfering with the game's full-screen directional touch controls. This limits a browser accessibility feature; players who need page zoom should use browser-level accessibility controls.
 
 Never commit `.env` files or credentials. If a real secret is accidentally committed, revoke and rotate it immediately with its provider, replace it in every affected environment, then remove it from repository history only through the repository's approved secret-removal procedure.
@@ -27,7 +29,7 @@ Never commit `.env` files or credentials. If a real secret is accidentally commi
 
 ## Features
 
-- **Classic Nokia LCD Aesthetic**: Desktop console casing and optional LCD scanline/glare effects, with ten 9-color preset themes (including Nokia 3310, GameBoy 1989, Cyberpunk 2077, Pip-Boy, and Paper/Sketch).
+- **Classic Nokia LCD Aesthetic**: Desktop console casing and optional LCD scanline/glare effects, with ten preset themes (including Nokia 3310, GameBoy 1989, Cyberpunk 2077, Pip-Boy, and Paper/Sketch).
 - **Core Gameplay Mechanics**:
   - Grid wrapping borders.
   - Progressive speed acceleration (300ms down to 80ms min speed).
@@ -44,10 +46,12 @@ Never commit `.env` files or credentials. If a real secret is accidentally commi
 - **Career & Achievements**:
   - Tracks High Score, Total Food Eaten, Total Play Time, and Games Started.
   - 7 Dynamic Ranks with progress indicators and optional rank-based snake decorations.
-  - 19 Achievements across Milestones, Skill, Cumulative, and Hidden categories with pixel-art icons and queued toast notifications.
+  - 25 Achievements across Milestones, Skill, Cumulative, and Hidden categories with pixel-art icons and queued toast notifications.
 - **Audio & Haptics**:
-  - Web Audio API sound effects, optional chiptune background music, and sound-file fallback when Web Audio is unavailable.
-  - Mobile touch vibration support.
+  - Web Audio API sound effects, optional chiptune background music that pauses when the app is backgrounded, and sound-file fallback when Web Audio is unavailable.
+  - Android haptics and touch vibration support.
+- **Android Advertising**: Rewarded and interstitial ads are Android-only; user rewards are granted only after AdMob reports the earned-reward event. EEA/UK consent is requested through Google's UMP flow before loading ads.
+- **Safe Ad Testing**: Google demo ad units are the default, including for Android debug APKs. Production units are selected only with `VITE_ADMOB_USE_TEST_IDS=false` for a reviewed Play release build.
 - **Responsive Canvas & Motion**: Retina-aware canvas rendering, optional smooth movement, and reduced-motion preference support.
 - **Full Localization**:
   - English (EN) and Turkish (TR) language toggle.
@@ -68,6 +72,25 @@ npm run lint
 # Run reducer and utility tests
 npm test
 
-# Build for production
+# Build the ad-free web/PWA assets (AdMob test IDs are selected by default)
 npm run build
 ```
+
+### Android test builds
+
+The Android project is generated locally by Capacitor and is intentionally ignored by Git:
+
+```bash
+npx cap add android
+npx cap sync android
+node scripts/configure-android-admob.mjs
+node scripts/configure-android-immersive.mjs
+cd android
+.\gradlew.bat assembleDebug
+```
+
+Build with JDK 21. The configuration script places this app's AdMob application ID in the generated Android manifest. The debug APK uses Google's demo ad units; never test with production ad-unit IDs.
+
+### Signed Play release builds
+
+The Android workflow creates a debug APK on CI. A signed Play AAB is an explicit manual workflow action and requires the repository secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, and `ANDROID_KEY_PASSWORD`. The Play build switches to this app's production AdMob unit IDs only for that release job. Keep the upload keystore private and back it up securely; do not commit it.

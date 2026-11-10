@@ -15,12 +15,15 @@ const rankThresholds = [
   RankThresholds.MAZE_MASTER,
   RankThresholds.COBRA_KING,
   RankThresholds.LEGENDARY,
+  RankThresholds.STAR_SERPENT,
+  RankThresholds.COSMIC_COIL,
+  RankThresholds.INFINITY_SERPENT,
 ];
 
 export const RankProgress: React.FC<RankProgressProps> = ({ score, lang }) => {
   const nextThreshold = rankThresholds.find((threshold) => score <= threshold);
   const previousThreshold = nextThreshold === undefined
-    ? RankThresholds.LEGENDARY
+    ? RankThresholds.INFINITY_SERPENT
     : rankThresholds[rankThresholds.indexOf(nextThreshold) - 1] ?? 0;
   const progress = nextThreshold === undefined
     ? 100

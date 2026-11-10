@@ -42,7 +42,7 @@ Featuring authentic green monochrome LCD aesthetics, dot-matrix scanline effects
 
 ### 🏆 CAREER, STATS & ACHIEVEMENTS
 * **Ranks from Worm to Mythical Leviathan:** Rise through 7 distinct skill ranks.
-* **16+ Challenging Achievements:** Wall Phobia, Narrow Passer, Ouroboros, Light Speed, and more!
+* **19 Challenging Achievements:** Wall Phobia, Narrow Passer, Ouroboros, Light Speed, and more!
 * **Daily Quests:** Fresh daily challenges to test your skills and earn trophies.
 * **Career Analytics:** Track your longest snake, total food eaten, session durations, and high scores per mode.
 
@@ -58,6 +58,6 @@ Featuring authentic green monochrome LCD aesthetics, dot-matrix scanline effects
 ### 🔒 PRIVACY & OFFLINE FIRST
 * 100% playable offline — no internet connection required for core gameplay.
 * No account registration or login needed.
-* Zero personal data collection — your high scores and preferences stay strictly on your device.
+* Scores, settings, and custom mazes stay on your device; Android AdMob advertising may collect device identifiers, approximate location, ad interactions, and diagnostics as described in Google's privacy disclosures.
 
 Download **Snake Maze 2026** today and experience the timeless arcade classic!

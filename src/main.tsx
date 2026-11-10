@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.tsx';
+import { initializeStorage } from './utils/storage.ts';
+import { isCapacitor } from './utils/platform.ts';
 import './index.css';
 import '@fontsource/vt323/latin-400.css';
 import '@fontsource/vt323/latin-ext-400.css';
@@ -15,13 +16,30 @@ import '@fontsource/jetbrains-mono/latin-ext-700.css';
 import '@fontsource/jetbrains-mono/latin-800.css';
 import '@fontsource/jetbrains-mono/latin-ext-800.css';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const rootElement = document.getElementById('root');
+if (!rootElement) throw new Error('Missing application root element.');
+const root = ReactDOM.createRoot(rootElement);
 
-if ('serviceWorker' in navigator) {
+async function bootstrap(): Promise<void> {
+  await initializeStorage();
+  const { default: App } = await import('./App.tsx');
+  root.render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}
+
+void bootstrap().catch((error: unknown) => {
+  console.error('Unable to start Snake Maze:', error);
+  root.render(
+    <main role="alert" className="app-shell flex items-center justify-center bg-[#C7F0D8] p-6 text-center font-mono-retro text-[#3A3F44]">
+      <p>Snake Maze could not load its saved settings. Restart the app and try again.</p>
+    </main>
+  );
+});
+
+if (!isCapacitor() && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js').catch((error: unknown) => {
       console.error('Service worker registration failed:', error);

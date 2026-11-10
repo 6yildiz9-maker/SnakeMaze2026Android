@@ -11,6 +11,7 @@ import {
   HandOrientation,
   DifficultyProfile,
   GameMode,
+  FoodType,
 } from './types.ts';
 import {
   GameLogic,
@@ -32,7 +33,7 @@ import { careerManager } from './utils/career.ts';
 import { questManager } from './utils/quests.ts';
 import { vibrate } from './utils/haptics.ts';
 import { t } from './utils/translations.ts';
-import { STORAGE_KEYS, storage, getModeHighScore, setModeHighScore } from './utils/storage.ts';
+import { flushStorage, STORAGE_KEYS, storage, getModeHighScore, setModeHighScore } from './utils/storage.ts';
 import { createInitialGameState, gameReducer } from './utils/gameReducer.ts';
 import { createRandomSeed, currentTimeMs } from './utils/time.ts';
 import { InputController } from './utils/inputController.ts';
@@ -112,9 +113,12 @@ export const App: React.FC = () => {
   const [isCareerOpen, setIsCareerOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [toast, setToast] = useState<ToastMessage[]>([]);
+  const [foodEffect, setFoodEffect] = useState<FoodType | null>(null);
+  const [foodEffectDirection, setFoodEffectDirection] = useState<Direction | null>(null);
   const enqueueToast = useCallback((message: ToastMessage) => {
-    setToast((queue) => [...queue, message].slice(-3));
+    setToast([message]);
   }, []);
+  const dismissToast = useCallback(() => setToast([]), []);
   const handleAchievementUnlocked = useCallback((unlockedAch: AchievementItem) => {
     soundManager.playBonusEat();
     enqueueToast({
@@ -168,6 +172,9 @@ export const App: React.FC = () => {
   const gameStartTimeRef = useRef<number>(0);
   const sessionFoodEatenRef = useRef<number>(0);
   const bonusFoodEatenRef = useRef<number>(0);
+  const foodTypeCountsRef = useRef({ golden: 0, ice: 0, poison: 0, mystery: 0 });
+  const playedCustomMazeRef = useRef(false);
+  const longestSnakeRef = useRef(3);
   const foodWithoutWallRef = useRef<number>(0);
   const foodAtMaxSpeedRef = useRef<number>(0);
   const bonusEatenFastRef = useRef<boolean>(false);
@@ -214,6 +221,12 @@ export const App: React.FC = () => {
   const handleToggleRankDecorations = (enabled: boolean) => {
     setRankDecorationsEnabled(enabled);
     storage.setItem(STORAGE_KEYS.rankDecorationsEnabled, String(enabled));
+  };
+
+  const handleShowAdPrivacyOptions = () => {
+    void adService.showPrivacyOptions().catch((error: unknown) => {
+      console.error('Unable to open ad privacy options:', error);
+    });
   };
 
   // Color updates
@@ -266,11 +279,10 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     inputControllerRef.current.setCurrentDirection(direction);
-  }, [direction]);
+    inputControllerRef.current.setPendingDirections(gameState.directionQueue);
+  }, [direction, gameState.directionQueue]);
 
-  useEffect(() => {
-    inputControllerRef.current.setControlMode(controlMode);
-  }, [controlMode]);
+  useEffect(() => inputControllerRef.current.setControlMode(controlMode), [controlMode]);
 
   // Queue direction change through input controller layer (FR-12-R)
   const queueDirection = useCallback((newDir: Direction) => {
@@ -279,12 +291,7 @@ export const App: React.FC = () => {
       return;
     }
     const added = inputControllerRef.current.handleDirection(newDir);
-    if (added) {
-      const popped = inputControllerRef.current.popNextDirection();
-      if (popped) {
-        dispatch({ type: 'QUEUE_DIRECTION', direction: popped });
-      }
-    }
+    if (added) dispatch({ type: 'QUEUE_DIRECTION', direction: newDir });
   }, [countdown]);
 
   // Direction turn actions
@@ -300,12 +307,7 @@ export const App: React.FC = () => {
       return;
     }
     const dir = inputControllerRef.current.handleZigZag('left');
-    if (dir) {
-      const popped = inputControllerRef.current.popNextDirection();
-      if (popped) {
-        dispatch({ type: 'QUEUE_DIRECTION', direction: popped });
-      }
-    }
+    if (dir) dispatch({ type: 'QUEUE_DIRECTION', direction: dir });
   };
 
   const turnZigZagRight = () => {
@@ -314,12 +316,7 @@ export const App: React.FC = () => {
       return;
     }
     const dir = inputControllerRef.current.handleZigZag('right');
-    if (dir) {
-      const popped = inputControllerRef.current.popNextDirection();
-      if (popped) {
-        dispatch({ type: 'QUEUE_DIRECTION', direction: popped });
-      }
-    }
+    if (dir) dispatch({ type: 'QUEUE_DIRECTION', direction: dir });
   };
 
   // Clear saved game
@@ -517,17 +514,19 @@ export const App: React.FC = () => {
   };
 
   // Start new game
-  const startNewGame = () => {
+  const startNewGame = (
+    requestedMode: GameMode = selectedMode,
+    requestedMazeId: string = selectedCustomMazeId
+  ) => {
     soundManager.playButtonClick();
+    void soundManager.unlockAudio();
+    setSelectedMode(requestedMode);
+    storage.setItem(STORAGE_KEYS.selectedMode, requestedMode);
+    setSelectedCustomMazeId(requestedMazeId);
+    storage.setItem(STORAGE_KEYS.selectedCustomMaze, requestedMazeId);
+    setHighScore(getModeHighScore(requestedMode));
     clearSavedGame();
-    if (!musicEnabled && !storage.getItem(STORAGE_KEYS.musicHintShown)) {
-      enqueueToast({
-        id: 'music_hint',
-        type: 'info',
-        message: t(lang, 'music_hint'),
-      });
-      storage.setItem(STORAGE_KEYS.musicHintShown, 'true');
-    }
+    soundManager.setMusicMode(musicEnabled ? 'playing' : 'stopped');
 
     const totalGames = storage.getNumber(STORAGE_KEYS.totalGamesStarted, 0) + 1;
     storage.setItem(STORAGE_KEYS.totalGamesStarted, String(totalGames));
@@ -541,21 +540,29 @@ export const App: React.FC = () => {
     ];
 
     let customObstacles: Point[] = [];
-    if (selectedMode === 'maze' && selectedCustomMazeId) {
-      const found = mazeEditorService.getCustomMazes().find((m) => m.id === selectedCustomMazeId);
+    if (requestedMode === 'maze' && requestedMazeId) {
+      const found = mazeEditorService.getCustomMazes().find((m) => m.id === requestedMazeId);
       if (found) {
         customObstacles = [...found.obstacles];
       }
     }
+    playedCustomMazeRef.current = requestedMode === 'maze' &&
+      mazeEditorService.getCustomMazes().some((maze) => maze.id === requestedMazeId);
+    foodTypeCountsRef.current = { golden: 0, ice: 0, poison: 0, mystery: 0 };
+    longestSnakeRef.current = initialSnake.length;
+    setFoodEffect(null);
+    setFoodEffectDirection(null);
+    inputControllerRef.current.setCurrentDirection('UP');
+    inputControllerRef.current.setPendingDirections([]);
 
     dispatch({
       type: 'RESET',
       state: {
-        ...createInitialGameState(selectedMode, customObstacles),
+        ...createInitialGameState(requestedMode, customObstacles),
         snake: initialSnake,
         food: [midX, midY - 4],
       },
-      mode: selectedMode,
+      mode: requestedMode,
       customObstacles,
       randomSeed: createRandomSeed(),
     });
@@ -573,11 +580,18 @@ export const App: React.FC = () => {
     gameStartTimeRef.current = currentTimeMs();
     startCountdown();
 
-    const modeToastKey = `mode_start_toast_${selectedMode}` as const;
+    const selectedMaze = requestedMode === 'maze' && requestedMazeId
+      ? mazeEditorService.getCustomMazes().find((maze) => maze.id === requestedMazeId)
+      : undefined;
+    const modeToast = selectedMaze
+      ? t(lang, 'mode_start_toast_custom_maze', { name: selectedMaze.name })
+      : t(lang, `mode_start_toast_${requestedMode}` as
+        'mode_start_toast_classic' | 'mode_start_toast_maze' |
+        'mode_start_toast_survival' | 'mode_start_toast_time_attack');
     enqueueToast({
-      id: `mode_start_${selectedMode}_${gameStartTimeRef.current}`,
+      id: `mode_start_${requestedMode}_${gameStartTimeRef.current}`,
       type: 'info',
-      message: t(lang, modeToastKey),
+      message: modeToast,
     });
   };
 
@@ -684,6 +698,12 @@ export const App: React.FC = () => {
         currentTimeMs() - gameStartTimeRef.current < GameLogic.FAST_DEATH_THRESHOLD_MS &&
         !diedToOwnTail,
       mode: selectedMode,
+      goldenFoodsThisGame: foodTypeCountsRef.current.golden,
+      iceFoodsThisGame: foodTypeCountsRef.current.ice,
+      poisonFoodsThisGame: foodTypeCountsRef.current.poison,
+      mysteryFoodsThisGame: foodTypeCountsRef.current.mystery,
+      playedCustomMaze: playedCustomMazeRef.current,
+      longestSnakeThisGame: longestSnakeRef.current,
     };
 
     achievementsManager.checkAchievements(fullGameData, handleAchievementUnlocked);
@@ -694,7 +714,7 @@ export const App: React.FC = () => {
     careerManager.recordSession(
       gameOverData,
       sessionDurationSeconds,
-      snake.length,
+      longestSnakeRef.current,
       level,
       activeTheme,
       bonusFoodEatenRef.current
@@ -719,7 +739,6 @@ export const App: React.FC = () => {
     totalFood,
     totalPlayTime,
     selectedMode,
-    snake.length,
     enqueueToast,
     lang,
   ]);
@@ -738,11 +757,14 @@ export const App: React.FC = () => {
     }
 
     if (event.type === 'regular-food' || event.type === 'bonus-food') {
+      setFoodEffectDirection(direction);
       sessionFoodEatenRef.current += 1;
+      longestSnakeRef.current = Math.max(longestSnakeRef.current, snake.length);
       particleSystem.triggerHeadSquash();
       particleSystem.triggerBitePulse();
 
       if (event.type === 'bonus-food') {
+        setFoodEffect('bonus');
         bonusFoodEatenRef.current += 1;
         bonusEatenFastRef.current ||= currentTimeMs() - bonusSpawnTimeRef.current <
           GameLogic.BONUS_FOOD_FAST_EAT_TIMEOUT_MS;
@@ -752,6 +774,17 @@ export const App: React.FC = () => {
         bonusTimeoutRef.current = null;
         soundManager.playBonusEat();
       } else {
+        const effectType: FoodType =
+          event.sound === 'golden' ? 'golden' :
+          event.sound === 'ice' ? 'ice' :
+          event.sound === 'poison' ? 'poison' :
+          event.sound === 'bonus' ? 'bonus' :
+          event.foodType === 'mystery' ? 'mystery' : 'regular';
+        setFoodEffect(effectType);
+        if (event.foodType === 'golden' || event.foodType === 'ice' ||
+          event.foodType === 'poison' || event.foodType === 'mystery') {
+          foodTypeCountsRef.current[event.foodType] += 1;
+        }
         if (!wallHitRef.current) foodWithoutWallRef.current += 1;
         if (event.gameSpeedBefore === GameLogic.MIN_SPEED) foodAtMaxSpeedRef.current += 1;
 
@@ -804,7 +837,17 @@ export const App: React.FC = () => {
     snake,
     colors.snakeHead,
     colors.particle,
+    direction,
   ]);
+
+  useEffect(() => {
+    if (!foodEffect) return;
+    const timer = setTimeout(() => {
+      setFoodEffect(null);
+      setFoodEffectDirection(null);
+    }, 1800);
+    return () => clearTimeout(timer);
+  }, [foodEffect]);
 
   useEffect(() => {
     if (screen !== 'game' || countdown !== null) return;
@@ -845,6 +888,9 @@ export const App: React.FC = () => {
 
   useEffect(() => {
     const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        void soundManager.suspendAudio();
+      }
       if (document.visibilityState !== 'hidden' || screen !== 'game') return;
       if (bonusFood && bonusTimeoutRef.current) {
         bonusRemainingRef.current = Math.max(0, bonusDeadlineRef.current - currentTimeMs());
@@ -907,6 +953,7 @@ export const App: React.FC = () => {
   // Pause menu actions
   const handleResumeFromPause = () => {
     soundManager.playButtonClick();
+    void soundManager.unlockAudio();
     setScreen('game');
     startCountdown();
   };
@@ -930,18 +977,15 @@ export const App: React.FC = () => {
     const touch = event.changedTouches[0];
     const dx = touch.clientX - start.x;
     const dy = touch.clientY - start.y;
+    if (countdown !== null && countdown > 0) {
+      setCountdown(null);
+      return;
+    }
     const dir = inputControllerRef.current.handleSwipe(dx, dy);
     if (dir) {
       soundManager.playButtonClick();
       vibrate(40);
-      if (countdown !== null && countdown > 0) {
-        setCountdown(null);
-        return;
-      }
-      const popped = inputControllerRef.current.popNextDirection();
-      if (popped) {
-        dispatch({ type: 'QUEUE_DIRECTION', direction: popped });
-      }
+      dispatch({ type: 'QUEUE_DIRECTION', direction: dir });
     }
   };
 
@@ -1062,8 +1106,16 @@ export const App: React.FC = () => {
       });
 
       const statePromise = CapApp.addListener('appStateChange', (state) => {
+        if (!state.isActive) {
+          void soundManager.suspendAudio();
+        }
         if (!state.isActive && screen === 'game') {
           handleBackInGame();
+        }
+        if (!state.isActive) {
+          void flushStorage().catch((error: unknown) => {
+            console.error('Unable to flush saved game data before backgrounding:', error);
+          });
         }
       });
 
@@ -1099,7 +1151,7 @@ export const App: React.FC = () => {
 
   return (
     <div className="app-shell w-full flex flex-col items-center justify-between bg-nokia-grid overflow-hidden text-[#3A3F44] font-nokia select-none">
-      <Toast toast={toast} onDismiss={() => setToast((queue) => queue.slice(1))} />
+      <Toast toast={toast} onDismiss={dismissToast} />
       <CareerModal
         isOpen={isCareerOpen}
         onClose={() => setIsCareerOpen(false)}
@@ -1130,6 +1182,7 @@ export const App: React.FC = () => {
         onToggleMusic={handleToggleMusic}
         rankDecorationsEnabled={rankDecorationsEnabled}
         onToggleRankDecorations={handleToggleRankDecorations}
+        onShowPrivacyOptions={handleShowAdPrivacyOptions}
         controlMode={controlMode}
         onSelectControlMode={handleSelectControlMode}
         colors={colors}
@@ -1159,6 +1212,7 @@ export const App: React.FC = () => {
         <MazeEditorScreen
           lang={lang}
           onBack={() => setScreen('menu')}
+          onPlayMaze={(mazeId) => startNewGame('maze', mazeId)}
         />
       )}
       {screen === 'game' && (
@@ -1178,6 +1232,8 @@ export const App: React.FC = () => {
           direction={direction}
           colors={colors}
           score={score}
+          foodEffect={foodEffect}
+          foodEffectDirection={foodEffectDirection}
           level={difficultyManager.getLevel(score)}
           countdown={countdown}
           gameSpeed={gameSpeed}

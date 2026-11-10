@@ -23,6 +23,8 @@ interface GameScreenProps {
   direction: Direction;
   colors: ThemeColors;
   score: number;
+  foodEffect?: FoodType | null;
+  foodEffectDirection?: Direction | null;
   level: number;
   countdown: number | null;
   gameSpeed: number;
@@ -58,6 +60,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   direction,
   colors,
   score,
+  foodEffect = null,
+  foodEffectDirection = null,
   level,
   countdown,
   gameSpeed,
@@ -119,6 +123,23 @@ export const GameScreen: React.FC<GameScreenProps> = ({
               >
                 <Clock className="w-3 h-3" />
                 {Math.ceil(timeRemainingMs / 1000)}s
+              </span>
+            )}
+          </div>
+          <div className="h-4">
+            {foodEffect && foodEffect !== 'regular' && (
+              <span className="inline-block px-1.5 rounded bg-[#3A3F44] text-[#C7F0D8] text-[10px] font-bold font-mono-retro animate-pulse">
+                {t(lang, `food_${foodEffect}_effect`)}
+                {foodEffectDirection && (
+                  <span className="ml-1" aria-label={t(lang, 'food_approach_direction', {
+                    direction: t(lang, `turn_${foodEffectDirection.toLowerCase()}` as
+                      'turn_up' | 'turn_down' | 'turn_left' | 'turn_right'),
+                  })}>
+                    {t(lang, 'food_approach_direction', {
+                      direction: ({ UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' })[foodEffectDirection],
+                    })}
+                  </span>
+                )}
               </span>
             )}
           </div>

@@ -19,6 +19,9 @@ export const GameLogic = {
 
 export const RankThresholds = {
   LEGENDARY: 500,
+  STAR_SERPENT: 700,
+  COSMIC_COIL: 1000,
+  INFINITY_SERPENT: 1500,
   COBRA_KING: 350,
   MAZE_MASTER: 200,
   RATTLER: 100,
@@ -41,6 +44,9 @@ export const AchievementThresholds = {
   GLUTTON_FOOD: 1000,
   LOYAL_PLAYER_GAMES: 100,
   TIME_TRAVELER_SECONDS: 3600,
+  SPECIAL_FOOD_STREAK: 3,
+  MYSTERY_FOOD_STREAK: 5,
+  LONG_SERPENT_LENGTH: 25,
 };
 
 export const DefaultColors: ThemeColors = {

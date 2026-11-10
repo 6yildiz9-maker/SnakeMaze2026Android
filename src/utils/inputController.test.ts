@@ -55,6 +55,28 @@ describe('InputController', () => {
     expect(controller.handleDirection('UP')).toBe(false); // exceeds 3
   });
 
+  it('keeps rapid turns queued against the last pending turn', () => {
+    const controller = new InputController('UP', 'alternative');
+
+    expect(controller.handleDirection('RIGHT')).toBe(true);
+    expect(controller.handleDirection('DOWN')).toBe(true);
+    expect(controller.handleDirection('LEFT')).toBe(true);
+    expect(controller.handleDirection('UP')).toBe(false);
+    expect(controller.getQueue()).toEqual(['RIGHT', 'DOWN', 'LEFT']);
+
+    controller.setCurrentDirection('RIGHT');
+    controller.setPendingDirections(['DOWN', 'LEFT']);
+    expect(controller.handleDirection('UP')).toBe(true);
+    expect(controller.getQueue()).toEqual(['DOWN', 'LEFT', 'UP']);
+  });
+
+  it('ignores repeated input for the same pending direction', () => {
+    const controller = new InputController('UP', 'alternative');
+    expect(controller.handleDirection('RIGHT')).toBe(true);
+    expect(controller.handleDirection('RIGHT')).toBe(false);
+    expect(controller.getQueue()).toEqual(['RIGHT']);
+  });
+
   it('handles zig-zag button input directly via controller layer', () => {
     const controller = new InputController('UP', 'classic');
     const dir = controller.handleZigZag('left');
