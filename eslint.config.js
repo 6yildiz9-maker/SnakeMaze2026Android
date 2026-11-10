@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['dist/**', 'node_modules/**', 'android/**', 'web-export/**'],
+    ignores: ['dist/**', 'node_modules/**', 'android/**', 'apps/android/**', 'web-export/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -50,12 +50,6 @@ export default tseslint.config(
     files: ['src/utils/storage.ts'],
     rules: {
       'no-restricted-properties': 'off',
-    },
-  },
-  {
-    files: ['public/sw.js'],
-    languageOptions: {
-      globals: globals.serviceworker,
     },
   },
   {

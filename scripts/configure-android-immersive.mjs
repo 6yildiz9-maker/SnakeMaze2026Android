@@ -3,6 +3,7 @@ import { join } from 'node:path';
 
 const mainActivityPath = join(
   process.cwd(),
+  'apps',
   'android',
   'app',
   'src',

@@ -2,17 +2,9 @@
 
 A retro Nokia-style snake game featuring maze obstacles, bonus foods, dynamic career ranks, 25 unlockable achievements, customizable themes, and multiple game modes.
 
-## Platform Matrix
+## Android app scope
 
-| Platform | Target Runtime | Ad & Monetization | Offline / PWA |
-| :--- | :--- | :--- | :--- |
-| **Google Play (Birincil)** | Android App / AAB (Capacitor Native) | Optional Rewarded AdMob | Full offline cache |
-| **PWA (Paralel)** | Mobile Web Browser (Vite PWA) | Ad-free (No-op) | Service Worker + Manifest |
-| **Masaüstü Tarayıcı** | Desktop Web (Chrome, Firefox, Safari) | Ad-free (No-op) | Keyboard WASD & Arrows |
-
-The Android/Tablet application is the primary Play distribution. The standalone, ad-free PWA is maintained separately at [SnakeMaze2026Web](https://github.com/6yildiz9-maker/SnakeMaze2026Web).
-
-The viewport keeps pinch zoom disabled to prevent mobile browser zoom gestures from interfering with the game's full-screen directional touch controls. This limits a browser accessibility feature; players who need page zoom should use browser-level accessibility controls.
+This repository builds the Android/Tablet Google Play application. The Capacitor/Gradle project is in `apps/android`; the shared React game source and npm build configuration remain at the repository root because Capacitor packages their output into the native app. The standalone, ad-free PWA is maintained separately at [SnakeMaze2026Web](https://github.com/6yildiz9-maker/SnakeMaze2026Web).
 
 Never commit `.env` files or credentials. If a real secret is accidentally committed, revoke and rotate it immediately with its provider, replace it in every affected environment, then remove it from repository history only through the repository's approved secret-removal procedure.
 
@@ -56,7 +48,7 @@ Never commit `.env` files or credentials. If a real secret is accidentally commi
 - **Responsive Canvas & Motion**: Retina-aware canvas rendering, optional smooth movement, and reduced-motion preference support.
 - **Full Localization**:
   - English (EN) and Turkish (TR) language toggle.
-- **Installable and Offline**: Bundled fonts, app manifest, and cache-first service worker keep the game available without a network after the first visit.
+- **Offline gameplay**: Game assets are bundled into the Android app; ad requests require an internet connection.
 
 ## Development
 
@@ -73,13 +65,13 @@ npm run lint
 # Run reducer and utility tests
 npm test
 
-# Build the ad-free web/PWA assets (AdMob test IDs are selected by default)
+# Build the web assets bundled into the Android app (AdMob test IDs are selected by default)
 npm run build
 ```
 
 ### Android test builds
 
-The Android Gradle project and native source are tracked in Git. Generated web assets, local SDK configuration, build outputs, and signing files remain ignored:
+The Android Gradle project and native source are tracked separately under `apps/android/`. The root `src/`, `public/`, `index.html`, `package.json`, and Vite/Capacitor configuration are required to build the game's Android WebView content. Generated web assets, local SDK configuration, build outputs, and signing files remain ignored:
 
 ```bash
 npm ci
@@ -89,7 +81,7 @@ node scripts/configure-android-admob.mjs
 node scripts/configure-android-immersive.mjs
 ```
 
-Build with JDK 21 from the `android` directory (`.\gradlew.bat assembleDebug` on Windows or `./gradlew assembleDebug` on macOS/Linux). Capacitor sync regenerates web/plugin assets; the checked-in native source retains the app identity and branding. The debug APK uses Google's demo ad units; never test with production ad-unit IDs.
+Build with JDK 21 from the `apps/android` directory (`.\gradlew.bat assembleDebug` on Windows or `./gradlew assembleDebug` on macOS/Linux). Capacitor sync regenerates web/plugin assets; the checked-in native source retains the app identity and branding. The debug APK uses Google's demo ad units; never test with production ad-unit IDs.
 
 ### Signed Play release builds
 

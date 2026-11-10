@@ -4,6 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.aiwhishpers.snakemaze2026',
   appName: 'Pixelfang: Snake Maze',
   webDir: 'dist',
+  android: {
+    path: 'apps/android',
+  },
   server: {
     androidScheme: 'https',
   },
