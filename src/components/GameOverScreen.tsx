@@ -9,7 +9,8 @@ interface GameOverScreenProps {
   lang: Language;
   score: number;
   rank: string;
-  won: boolean;
+  won?: boolean;
+  outcome?: 'lost' | 'won' | 'time_up';
   isNewHighScore: boolean;
   mode?: GameMode;
   onTryAgain: () => void;
@@ -21,36 +22,59 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
   lang,
   score,
   rank,
-  won,
+  won = false,
+  outcome,
   isNewHighScore,
   mode,
   onTryAgain,
   onShare,
   onHome,
-}) => (
-  <div className="w-full h-full flex flex-col items-center justify-center p-6 max-w-md mx-auto space-y-6">
-    <div className="text-center space-y-2">
-      <h2 className={`text-4xl sm:text-5xl font-black font-mono-retro tracking-widest uppercase drop-shadow-xs ${won ? 'text-[#2E7D32]' : 'text-red-600'}`}>
-        {t(lang, won ? 'victory' : 'game_over')}
-      </h2>
-      <div className="text-2xl font-bold font-mono-retro text-[#1E2328]">
-        {t(lang, 'your_score', { score })}
-      </div>
-      {isNewHighScore && (
-        <div className="text-lg font-black font-mono-retro text-[#2E7D32]">{t(lang, 'new_high_score')}</div>
-      )}
-      <div className="flex items-center justify-center gap-2 flex-wrap">
-        <div className="text-sm font-bold font-mono-retro text-[#2E7D32] bg-[#2E7D32]/10 py-1 px-3 rounded-full border border-[#2E7D32]/30">
-          {t(lang, 'rank_label', { rank })}
-        </div>
-        {mode && (
-          <div className="text-sm font-bold font-mono-retro text-[#3A3F44] bg-black/10 py-1 px-3 rounded-full border border-[#3A3F44]/20">
-            {t(lang, GAME_MODES[mode].nameKey)}
-          </div>
+}) => {
+  const finalOutcome = outcome ?? (won ? 'won' : 'lost');
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center p-6 max-w-md mx-auto space-y-6">
+      <div className="text-center space-y-2">
+        <h2
+          className={`text-4xl sm:text-5xl font-black font-mono-retro tracking-widest uppercase drop-shadow-xs ${
+            finalOutcome === 'won'
+              ? 'text-[#2E7D32]'
+              : finalOutcome === 'time_up'
+              ? 'text-amber-600'
+              : 'text-red-600'
+          }`}
+        >
+          {t(
+            lang,
+            finalOutcome === 'won'
+              ? 'victory'
+              : finalOutcome === 'time_up'
+              ? 'time_up_title'
+              : 'game_over'
+          )}
+        </h2>
+        {finalOutcome === 'time_up' && (
+          <p className="text-sm font-mono-retro font-semibold text-[#3A3F44]/80">
+            {t(lang, 'time_up_subtitle')}
+          </p>
         )}
+        <div className="text-2xl font-bold font-mono-retro text-[#1E2328]">
+          {t(lang, 'your_score', { score })}
+        </div>
+        {isNewHighScore && (
+          <div className="text-lg font-black font-mono-retro text-[#2E7D32]">{t(lang, 'new_high_score')}</div>
+        )}
+        <div className="flex items-center justify-center gap-2 text-sm font-bold font-mono-retro text-[#3A3F44]/90">
+          <span>{t(lang, 'rank_label', { rank })}</span>
+          {mode && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{t(lang, GAME_MODES[mode].nameKey)}</span>
+            </>
+          )}
+        </div>
+        <RankProgress score={score} lang={lang} />
       </div>
-      <RankProgress score={score} lang={lang} />
-    </div>
 
     <div className="w-full space-y-3 max-w-xs">
       <button
@@ -82,3 +106,4 @@ export const GameOverScreen: React.FC<GameOverScreenProps> = ({
     </div>
   </div>
 );
+};

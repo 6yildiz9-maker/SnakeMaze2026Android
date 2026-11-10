@@ -41,6 +41,8 @@ export const STORAGE_KEYS = {
   usedAllThemes: 'used_all_themes',
   usedCustomTheme: 'used_custom_theme',
   usedPresetThemes: 'used_preset_themes',
+  interstitialGameCount: 'interstitial_game_count',
+  interstitialThreshold: 'interstitial_threshold',
   achievementPrefix: 'achievement_',
 } as const;
 
@@ -60,27 +62,32 @@ export function setModeHighScore(mode: string, score: number): void {
   }
 }
 
-function getStorage(): Storage | null {
-  if (typeof window === 'undefined') return null;
-  try {
-    return window.localStorage;
-  } catch (error) {
-    console.error('Browser storage is unavailable:', error);
-    return null;
+const inMemoryStore = new Map<string, string>();
+
+function getStorage(): { getItem: (key: string) => string | null; setItem: (key: string, value: string) => void; removeItem: (key: string) => void } {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      return window.localStorage;
+    } catch {
+      // fallback to in-memory store
+    }
   }
+  return {
+    getItem: (key: string) => inMemoryStore.get(key) ?? null,
+    setItem: (key: string, value: string) => inMemoryStore.set(key, String(value)),
+    removeItem: (key: string) => inMemoryStore.delete(key),
+  };
 }
 
 export const storage = {
   getItem(key: string): string | null {
-    return getStorage()?.getItem(key) ?? null;
+    return getStorage().getItem(key);
   },
   setItem(key: string, value: string): void {
-    const store = getStorage();
-    if (!store) throw new Error('Browser storage is unavailable.');
-    store.setItem(key, value);
+    getStorage().setItem(key, value);
   },
   removeItem(key: string): void {
-    getStorage()?.removeItem(key);
+    getStorage().removeItem(key);
   },
   getNumber(key: string, fallback: number): number {
     const value = Number(this.getItem(key));

@@ -190,7 +190,7 @@ describe('gameReducer', () => {
       }
     });
 
-    it('time_attack mode triggers victory preserving score when time expires', () => {
+    it('time_attack mode triggers time_up preserving score when time expires', () => {
       const state = {
         ...createInitialGameState('time_attack'),
         timeRemainingMs: 100,
@@ -199,8 +199,22 @@ describe('gameReducer', () => {
 
       const next = gameReducer(state, { type: 'TICK', randomSeed: 1, elapsedMs: 200 });
       expect(next.timeRemainingMs).toBe(0);
-      expect(next.event?.type).toBe('victory');
+      expect(next.event?.type).toBe('time_up');
       expect(next.score).toBe(42);
+    });
+
+    it('preserves exact remaining time on time_attack across ticks and state restore', () => {
+      const state = {
+        ...createInitialGameState('time_attack'),
+        timeRemainingMs: 50000,
+      };
+
+      const ticked = gameReducer(state, { type: 'TICK', randomSeed: 1, elapsedMs: 300 });
+      expect(ticked.timeRemainingMs).toBe(49700);
+
+      const restored = gameReducer(ticked, { type: 'RESTORE', state: ticked });
+      expect(restored.timeRemainingMs).toBe(49700);
+      expect(restored.mode).toBe('time_attack');
     });
 
     it('survival mode uses higher speed increment (4)', () => {

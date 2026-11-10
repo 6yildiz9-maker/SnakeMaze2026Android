@@ -37,6 +37,8 @@ import { createInitialGameState, gameReducer } from './utils/gameReducer.ts';
 import { createRandomSeed, currentTimeMs } from './utils/time.ts';
 import { InputController } from './utils/inputController.ts';
 import { mazeEditorService } from './utils/mazeEditor.ts';
+import { isCapacitor } from './utils/platform.ts';
+import { adService } from './utils/ads.ts';
 import confetti from 'canvas-confetti';
 
 type Screen = 'menu' | 'game' | 'pause' | 'game_over' | 'maze_editor';
@@ -145,7 +147,7 @@ export const App: React.FC = () => {
 
   // Screen
   const [screen, setScreen] = useState<Screen>('menu');
-  const [gameOutcome, setGameOutcome] = useState<'lost' | 'won'>('lost');
+  const [gameOutcome, setGameOutcome] = useState<'lost' | 'won' | 'time_up'>('lost');
   const [isNewHighScore, setIsNewHighScore] = useState(false);
 
   // Game Core State
@@ -570,6 +572,13 @@ export const App: React.FC = () => {
     setScreen('game');
     gameStartTimeRef.current = currentTimeMs();
     startCountdown();
+
+    const modeToastKey = `mode_start_toast_${selectedMode}` as const;
+    enqueueToast({
+      id: `mode_start_${selectedMode}_${gameStartTimeRef.current}`,
+      type: 'info',
+      message: t(lang, modeToastKey),
+    });
   };
 
   // Resume saved game
@@ -602,11 +611,16 @@ export const App: React.FC = () => {
   const finishGame = useCallback((
     diedToOwnTail: boolean,
     finalScore = score,
-    outcome: 'lost' | 'won' = 'lost'
+    outcome: 'lost' | 'won' | 'time_up' = 'lost'
   ) => {
-    soundManager.playCrash();
-    vibrate(400);
+    if (outcome === 'time_up') {
+      vibrate(100);
+    } else {
+      soundManager.playCrash();
+      vibrate(400);
+    }
     clearSavedGame();
+    adService.onGameFinished();
 
     const sessionDurationSeconds = Math.max(
       1,
@@ -765,6 +779,11 @@ export const App: React.FC = () => {
       saveGameState();
     }
 
+    if (event.type === 'time_up') {
+      soundManager.playBonusEat();
+      finishGame(false, event.score, 'time_up');
+    }
+
     if (event.type === 'collision' || event.type === 'victory') {
       if (event.type === 'collision') {
         particleSystem.triggerCrashExplosion(snake, 20, colors.particle || colors.snakeHead);
@@ -873,7 +892,7 @@ export const App: React.FC = () => {
   }, [screen, bonusFood, saveGameState]);
 
   // Back button in Game -> Pause menu
-  const handleBackInGame = () => {
+  const handleBackInGame = useCallback(() => {
     soundManager.playButtonClick();
     if (bonusFood && bonusTimeoutRef.current) {
       bonusRemainingRef.current = Math.max(0, bonusDeadlineRef.current - currentTimeMs());
@@ -883,7 +902,7 @@ export const App: React.FC = () => {
     saveGameState();
     setHasSavedGame(true);
     setScreen('pause');
-  };
+  }, [bonusFood, saveGameState]);
 
   // Pause menu actions
   const handleResumeFromPause = () => {
@@ -984,9 +1003,98 @@ export const App: React.FC = () => {
     setIsSettingsOpen(true);
   };
 
-  const handleHomeFromGameOver = () => {
+  const lastTickedSecondRef = useRef<number | null>(null);
+
+  // Time Attack countdown audio ticking in the last 10 seconds
+  useEffect(() => {
+    if (screen !== 'game' || countdown !== null || gameState.timeRemainingMs === undefined) {
+      lastTickedSecondRef.current = null;
+      return;
+    }
+    if (gameState.timeRemainingMs <= 10000 && gameState.timeRemainingMs > 0) {
+      const currentSec = Math.ceil(gameState.timeRemainingMs / 1000);
+      if (lastTickedSecondRef.current !== currentSec) {
+        lastTickedSecondRef.current = currentSec;
+        soundManager.playTick();
+      }
+    }
+  }, [screen, countdown, gameState.timeRemainingMs]);
+
+  const handleHomeFromGameOver = useCallback(async () => {
     soundManager.playButtonClick();
     setScreen('menu');
+    await adService.maybeShowInterstitial();
+  }, []);
+
+  // Native Android Capacitor Lifecycle & Back Button Handling (P1)
+  useEffect(() => {
+    void adService.initialize();
+
+    if (!isCapacitor()) return;
+
+    let cleanupListeners: (() => void) | undefined;
+
+    import('@capacitor/app').then(({ App: CapApp }) => {
+      const backPromise = CapApp.addListener('backButton', () => {
+        if (isCareerOpen) {
+          setIsCareerOpen(false);
+          return;
+        }
+        if (isSettingsOpen) {
+          setIsSettingsOpen(false);
+          return;
+        }
+        if (screen === 'game') {
+          handleBackInGame();
+          return;
+        }
+        if (screen === 'pause' || screen === 'maze_editor') {
+          setScreen('menu');
+          return;
+        }
+        if (screen === 'game_over') {
+          void handleHomeFromGameOver();
+          return;
+        }
+        if (screen === 'menu') {
+          void CapApp.exitApp();
+        }
+      });
+
+      const statePromise = CapApp.addListener('appStateChange', (state) => {
+        if (!state.isActive && screen === 'game') {
+          handleBackInGame();
+        }
+      });
+
+      cleanupListeners = () => {
+        backPromise.then((h) => h.remove());
+        statePromise.then((h) => h.remove());
+      };
+    });
+
+    return () => {
+      cleanupListeners?.();
+    };
+  }, [screen, isCareerOpen, isSettingsOpen, handleBackInGame, handleHomeFromGameOver]);
+
+  const handleSupportRewarded = () => {
+    soundManager.playBonusEat();
+    confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
+    enqueueToast({
+      id: 'support_reward',
+      type: 'achievement',
+      title: t(lang, 'thank_you_for_support'),
+      message: t(lang, 'ad_support_desc'),
+    });
+  };
+
+  const handleAdNotReady = () => {
+    enqueueToast({
+      id: 'ad_not_ready',
+      type: 'info',
+      message: t(lang, 'ad_not_ready'),
+    });
   };
 
   return (
@@ -1043,6 +1151,8 @@ export const App: React.FC = () => {
           onCareer={openCareer}
           onSettings={openSettings}
           onMazeEditor={() => setScreen('maze_editor')}
+          onSupportRewarded={handleSupportRewarded}
+          onAdNotReady={handleAdNotReady}
         />
       )}
       {screen === 'maze_editor' && (
@@ -1101,6 +1211,7 @@ export const App: React.FC = () => {
           score={score}
           rank={achievementsManager.getRank(score, lang)}
           won={gameOutcome === 'won'}
+          outcome={gameOutcome}
           isNewHighScore={isNewHighScore}
           mode={selectedMode}
           onTryAgain={startNewGame}

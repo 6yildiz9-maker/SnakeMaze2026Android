@@ -44,6 +44,7 @@ interface GameScreenProps {
 
 export const GameScreen: React.FC<GameScreenProps> = ({
   lang,
+  mode,
   controlMode,
   buttonSize,
   handOrientation,
@@ -150,23 +151,49 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           rankDecoration={rankDecoration}
         />
 
-        {/* FR-04-R: Bonus Countdown Bar directly under playfield */}
-        {bonusFood && bonusRemainingMs > 0 && (
-          <div className="w-full max-w-[440px] mt-1.5 px-1 flex items-center gap-1.5 animate-fadeIn">
-            <Sparkles className="w-3.5 h-3.5 text-[#FFD700] animate-pulse" />
-            <div className="flex-1 h-2 bg-black/20 rounded-full overflow-hidden border border-[#3A3F44]/30">
-              <div
-                className={`h-full transition-all duration-100 ${
-                  bonusRemainingMs <= 1500 ? 'bg-red-500 animate-pulse' : 'bg-[#FFD700]'
-                }`}
-                style={{ width: `${bonusPercent}%` }}
-              />
+        {/* Fixed-height slot (h-9) directly under playfield for Bonus Countdown or Time Attack Timer */}
+        <div className="w-full max-w-[440px] h-9 my-1 px-1 flex items-center justify-center">
+          {bonusFood && bonusRemainingMs > 0 ? (
+            <div className="w-full h-full flex items-center gap-1.5 px-2 bg-black/5 rounded-lg border border-[#3A3F44]/20">
+              <Sparkles className="w-4 h-4 text-[#FFD700] animate-pulse shrink-0" />
+              <div className="flex-1 h-2.5 bg-black/20 rounded-sm overflow-hidden border border-[#3A3F44]/30">
+                <div
+                  className={`h-full transition-all duration-100 ${
+                    bonusRemainingMs <= 1500 ? 'bg-red-500 animate-pulse' : 'bg-[#FFD700]'
+                  }`}
+                  style={{ width: `${bonusPercent}%` }}
+                />
+              </div>
+              <span className="text-xs font-bold font-mono-retro text-[#3A3F44] min-w-[32px] text-right tabular-nums">
+                {(bonusRemainingMs / 1000).toFixed(1)}s
+              </span>
             </div>
-            <span className="text-[10px] font-bold font-mono-retro text-[#3A3F44] min-w-[28px] text-right">
-              {(bonusRemainingMs / 1000).toFixed(1)}s
-            </span>
-          </div>
-        )}
+          ) : mode === 'time_attack' || timeRemainingMs !== undefined ? (
+            <div
+              className={`w-full h-full flex items-center justify-between px-3 rounded-lg border font-mono-retro font-bold text-sm transition-colors ${
+                (timeRemainingMs ?? 0) <= 10000
+                  ? 'bg-red-500/20 text-red-700 border-red-500/50 animate-pulse'
+                  : 'bg-black/10 text-[#1E2328] border-[#3A3F44]/20'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Clock
+                  className={`w-4 h-4 shrink-0 ${
+                    (timeRemainingMs ?? 0) <= 10000 ? 'text-red-600' : 'text-[#3A3F44]'
+                  }`}
+                />
+                <span className="tracking-wider uppercase text-xs">
+                  {t(lang, 'mode_time_attack')}
+                </span>
+              </div>
+              <div className="text-lg font-black tracking-widest tabular-nums">
+                {((timeRemainingMs ?? 0) / 1000).toFixed(1)}s
+              </div>
+            </div>
+          ) : (
+            <div className="w-full h-full invisible" aria-hidden="true" />
+          )}
+        </div>
 
         {/* Countdown overlay */}
         {countdown !== null && countdown > 0 && (

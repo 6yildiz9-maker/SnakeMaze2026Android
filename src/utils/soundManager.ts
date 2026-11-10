@@ -359,6 +359,28 @@ class RetroSoundManager {
       console.warn('Unable to play crash sound:', error);
     }
   }
+
+  public playTick() {
+    if (!this.isEnabled) return;
+    const ctx = this.initCtx();
+    if (!ctx) return;
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(440, now + 0.03);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.03);
+    } catch (error) {
+      console.warn('Unable to play tick sound:', error);
+    }
+  }
 }
 
 export const soundManager = new RetroSoundManager();

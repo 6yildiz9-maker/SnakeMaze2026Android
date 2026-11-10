@@ -25,7 +25,7 @@ export interface GameEngineState {
 }
 
 export interface GameEvent {
-  type: 'move' | 'regular-food' | 'bonus-food' | 'collision' | 'victory';
+  type: 'move' | 'regular-food' | 'bonus-food' | 'collision' | 'victory' | 'time_up';
   score: number;
   directionChanged: Direction | null;
   wallHit: boolean;
@@ -238,7 +238,7 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
           return withEvent(
             { ...state, timeRemainingMs: 0 },
             {
-              type: 'victory',
+              type: 'time_up',
               score: state.score,
               directionChanged: null,
               wallHit: false,
