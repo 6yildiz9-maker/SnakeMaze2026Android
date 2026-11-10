@@ -2,6 +2,13 @@ export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
 
 export type Point = [number, number];
 
+export type GameMode = 'classic' | 'maze' | 'time_attack' | 'survival';
+export type FoodType = 'regular' | 'bonus' | 'golden' | 'ice' | 'poison' | 'mystery';
+export type DifficultyProfile = 'modern' | 'retro';
+
+export type ButtonSize = 'small' | 'medium' | 'large';
+export type HandOrientation = 'right' | 'left';
+
 export interface GameOverData {
   score: number;
   sessionFoodEaten: number;
@@ -13,6 +20,7 @@ export interface GameOverData {
   wallHit: boolean;
   mazePasses: number;
   usedSingleDirection: boolean;
+  mode?: GameMode;
 }
 
 export interface GameData {
@@ -31,6 +39,7 @@ export interface GameData {
   diedToOwnTail: boolean;
   diedNearHighScore: boolean;
   diedFast: boolean;
+  mode?: GameMode;
 }
 
 export interface Achievement {
@@ -48,6 +57,11 @@ export interface ThemeColors {
   snakeBody: string;
   food: string;
   map: string;
+  obstacle: string;
+  bonusOuter: string;
+  bonusInner: string;
+  grid: string;
+  particle: string;
 }
 
 export interface SavedGameState {
@@ -59,4 +73,5 @@ export interface SavedGameState {
   score: number;
   gameSpeed: number;
   isGameRunning: boolean;
+  mode?: GameMode;
 }

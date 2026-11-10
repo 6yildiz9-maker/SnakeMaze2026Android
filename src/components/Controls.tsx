@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ControlMode, Direction, Language } from '../types.ts';
+import { ControlMode, Direction, Language, ButtonSize, HandOrientation } from '../types.ts';
 import { soundManager } from '../utils/soundManager.ts';
 import { vibrate } from '../utils/haptics.ts';
 import { t } from '../utils/translations.ts';
@@ -7,6 +7,8 @@ import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, CornerDownLeft, CornerUpRigh
 
 interface ControlsProps {
   mode: ControlMode;
+  buttonSize?: ButtonSize;
+  handOrientation?: HandOrientation;
   currentDirection: Direction;
   onTurnUp: () => void;
   onTurnDown: () => void;
@@ -19,6 +21,8 @@ interface ControlsProps {
 
 export const Controls: React.FC<ControlsProps> = ({
   mode,
+  buttonSize = 'medium',
+  handOrientation = 'right',
   onTurnUp,
   onTurnDown,
   onTurnLeft,
@@ -36,7 +40,6 @@ export const Controls: React.FC<ControlsProps> = ({
   // Keyboard controls listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't intercept if user is typing in input
       if (
         document.activeElement?.tagName === 'INPUT' ||
         document.activeElement?.tagName === 'TEXTAREA'
@@ -61,7 +64,7 @@ export const Controls: React.FC<ControlsProps> = ({
         case 'a':
         case 'A':
           e.preventDefault();
-          if (mode === 'classic' && e.key !== 'ArrowLeft') {
+          if (mode === 'classic' && (e.key === 'a' || e.key === 'A')) {
             handleAction(onZigZagLeft);
           } else {
             handleAction(onTurnLeft);
@@ -71,7 +74,7 @@ export const Controls: React.FC<ControlsProps> = ({
         case 'd':
         case 'D':
           e.preventDefault();
-          if (mode === 'classic' && e.key !== 'ArrowRight') {
+          if (mode === 'classic' && (e.key === 'd' || e.key === 'D')) {
             handleAction(onZigZagRight);
           } else {
             handleAction(onTurnRight);
@@ -84,19 +87,45 @@ export const Controls: React.FC<ControlsProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [mode, onTurnUp, onTurnDown, onTurnLeft, onTurnRight, onZigZagLeft, onZigZagRight]);
 
+  // Size styling classes
+  const classicSizeClass =
+    buttonSize === 'small'
+      ? 'w-24 h-24 sm:w-28 sm:h-28'
+      : buttonSize === 'large'
+      ? 'w-32 h-32 sm:w-36 sm:h-36'
+      : 'w-28 h-28 sm:w-32 sm:h-32';
+
+  const dpadSizeClass =
+    buttonSize === 'small'
+      ? 'w-13 h-13'
+      : buttonSize === 'large'
+      ? 'w-18 h-18'
+      : 'w-16 h-16';
+
+  const dpadContainerClass =
+    buttonSize === 'small'
+      ? 'w-40 h-40'
+      : buttonSize === 'large'
+      ? 'w-52 h-52'
+      : 'w-48 h-48';
+
   return (
     <div className="w-full flex justify-center items-center py-2 select-none">
       {mode === 'classic' && (
-        <div className="flex justify-between items-center w-full max-w-sm px-6 gap-6">
+        <div
+          className={`flex justify-between items-center w-full max-w-sm px-6 gap-6 ${
+            handOrientation === 'left' ? 'flex-row-reverse' : 'flex-row'
+          }`}
+        >
           {/* Left ZigZag button */}
           <button
             type="button"
             onClick={() => handleAction(onZigZagLeft)}
             aria-label={t(lang, 'turn_left')}
-            className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-black/80 active:bg-black text-white flex flex-col items-center justify-center shadow-lg border-4 border-black/40 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className={`relative ${classicSizeClass} rounded-full bg-black/80 active:bg-black text-white flex flex-col items-center justify-center shadow-lg border-4 border-black/40 hover:scale-105 active:scale-95 transition-all cursor-pointer after:absolute after:-inset-3 after:content-['']`}
           >
-            <CornerDownLeft className="w-12 h-12 text-white" strokeWidth={3} />
-            <span className="text-[11px] font-bold tracking-wider mt-1 font-mono-retro">
+            <CornerDownLeft className="w-10 h-10 sm:w-12 sm:h-12 text-white" strokeWidth={3} />
+            <span className="text-[10px] sm:text-[11px] font-bold tracking-wider mt-1 font-mono-retro">
               {lang === 'tr' ? 'SOL / AŞAĞI' : 'LEFT / DOWN'}
             </span>
           </button>
@@ -106,10 +135,10 @@ export const Controls: React.FC<ControlsProps> = ({
             type="button"
             onClick={() => handleAction(onZigZagRight)}
             aria-label={t(lang, 'turn_right')}
-            className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-black/80 active:bg-black text-white flex flex-col items-center justify-center shadow-lg border-4 border-black/40 hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            className={`relative ${classicSizeClass} rounded-full bg-black/80 active:bg-black text-white flex flex-col items-center justify-center shadow-lg border-4 border-black/40 hover:scale-105 active:scale-95 transition-all cursor-pointer after:absolute after:-inset-3 after:content-['']`}
           >
-            <CornerUpRight className="w-12 h-12 text-white" strokeWidth={3} />
-            <span className="text-[11px] font-bold tracking-wider mt-1 font-mono-retro">
+            <CornerUpRight className="w-10 h-10 sm:w-12 sm:h-12 text-white" strokeWidth={3} />
+            <span className="text-[10px] sm:text-[11px] font-bold tracking-wider mt-1 font-mono-retro">
               {lang === 'tr' ? 'SAĞ / YUKARI' : 'RIGHT / UP'}
             </span>
           </button>
@@ -117,15 +146,15 @@ export const Controls: React.FC<ControlsProps> = ({
       )}
 
       {mode === 'alternative' && (
-        <div className="relative w-48 h-48 flex items-center justify-center">
+        <div className={`relative ${dpadContainerClass} flex items-center justify-center`}>
           {/* UP */}
           <button
             type="button"
             onClick={() => handleAction(onTurnUp)}
             aria-label={t(lang, 'turn_up')}
-            className="absolute top-0 w-16 h-16 rounded-full bg-black/80 active:bg-black text-white flex items-center justify-center shadow-md border-2 border-black/30 hover:scale-105 active:scale-95 transition cursor-pointer"
+            className={`absolute top-0 ${dpadSizeClass} rounded-full bg-black/80 active:bg-black text-white flex items-center justify-center shadow-md border-2 border-black/30 hover:scale-105 active:scale-95 transition cursor-pointer after:absolute after:-inset-2 after:content-['']`}
           >
-            <ArrowUp className="w-8 h-8" strokeWidth={3} />
+            <ArrowUp className="w-7 h-7 sm:w-8 sm:h-8" strokeWidth={3} />
           </button>
 
           {/* DOWN */}
@@ -133,9 +162,9 @@ export const Controls: React.FC<ControlsProps> = ({
             type="button"
             onClick={() => handleAction(onTurnDown)}
             aria-label={t(lang, 'turn_down')}
-            className="absolute bottom-0 w-16 h-16 rounded-full bg-black/80 active:bg-black text-white flex items-center justify-center shadow-md border-2 border-black/30 hover:scale-105 active:scale-95 transition cursor-pointer"
+            className={`absolute bottom-0 ${dpadSizeClass} rounded-full bg-black/80 active:bg-black text-white flex items-center justify-center shadow-md border-2 border-black/30 hover:scale-105 active:scale-95 transition cursor-pointer after:absolute after:-inset-2 after:content-['']`}
           >
-            <ArrowDown className="w-8 h-8" strokeWidth={3} />
+            <ArrowDown className="w-7 h-7 sm:w-8 sm:h-8" strokeWidth={3} />
           </button>
 
           {/* LEFT */}
@@ -143,9 +172,9 @@ export const Controls: React.FC<ControlsProps> = ({
             type="button"
             onClick={() => handleAction(onTurnLeft)}
             aria-label={t(lang, 'turn_left')}
-            className="absolute left-0 w-16 h-16 rounded-full bg-black/80 active:bg-black text-white flex items-center justify-center shadow-md border-2 border-black/30 hover:scale-105 active:scale-95 transition cursor-pointer"
+            className={`absolute left-0 ${dpadSizeClass} rounded-full bg-black/80 active:bg-black text-white flex items-center justify-center shadow-md border-2 border-black/30 hover:scale-105 active:scale-95 transition cursor-pointer after:absolute after:-inset-2 after:content-['']`}
           >
-            <ArrowLeft className="w-8 h-8" strokeWidth={3} />
+            <ArrowLeft className="w-7 h-7 sm:w-8 sm:h-8" strokeWidth={3} />
           </button>
 
           {/* RIGHT */}
@@ -153,9 +182,9 @@ export const Controls: React.FC<ControlsProps> = ({
             type="button"
             onClick={() => handleAction(onTurnRight)}
             aria-label={t(lang, 'turn_right')}
-            className="absolute right-0 w-16 h-16 rounded-full bg-black/80 active:bg-black text-white flex items-center justify-center shadow-md border-2 border-black/30 hover:scale-105 active:scale-95 transition cursor-pointer"
+            className={`absolute right-0 ${dpadSizeClass} rounded-full bg-black/80 active:bg-black text-white flex items-center justify-center shadow-md border-2 border-black/30 hover:scale-105 active:scale-95 transition cursor-pointer after:absolute after:-inset-2 after:content-['']`}
           >
-            <ArrowRight className="w-8 h-8" strokeWidth={3} />
+            <ArrowRight className="w-7 h-7 sm:w-8 sm:h-8" strokeWidth={3} />
           </button>
         </div>
       )}

@@ -8,6 +8,9 @@ import { useDialogAccessibility } from '../hooks/useDialogAccessibility.ts';
 import { Trophy, X } from 'lucide-react';
 import { RankProgress } from './RankProgress.tsx';
 import { AchievementIcon } from './AchievementIcon.tsx';
+import { QuestPanel } from './QuestPanel.tsx';
+import { questManager } from '../utils/quests.ts';
+import { careerManager } from '../utils/career.ts';
 
 interface CareerModalProps {
   isOpen: boolean;
@@ -31,6 +34,8 @@ export const CareerModal: React.FC<CareerModalProps> = ({
 
   const currentRank = achievementsManager.getRank(highScore, lang);
   const unlockedCount = ALL_ACHIEVEMENTS.filter((a) => achievementsManager.isUnlocked(a.id)).length;
+  const careerStats = careerManager.getStats();
+  const dailyQuests = questManager.getDailyQuests();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
@@ -56,58 +61,96 @@ export const CareerModal: React.FC<CareerModalProps> = ({
           </button>
         </div>
 
-        {/* Stats Row */}
-        <div className="p-4 sm:p-6 bg-black/5 border-b border-[#3A3F44]/20 grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
-          <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
-            <div className="text-[11px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
-              {lang === 'tr' ? 'EN YÜKSEK' : 'HIGH SCORE'}
+        {/* Scrollable Container */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* Stats Row */}
+          <div className="bg-black/5 p-3 rounded-xl border border-[#3A3F44]/20 grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+            <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
+              <div className="text-[10px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
+                {lang === 'tr' ? 'EN YÜKSEK' : 'HIGH SCORE'}
+              </div>
+              <div className="text-xl sm:text-2xl font-black font-mono-retro text-[#1E2328]">
+                {highScore}
+              </div>
             </div>
-            <div className="px-6 pt-4">
-              <RankProgress score={highScore} lang={lang} />
+
+            <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
+              <div className="text-[10px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
+                {lang === 'tr' ? 'TOPLAM YEMEK' : 'TOTAL FOOD'}
+              </div>
+              <div className="text-xl sm:text-2xl font-black font-mono-retro text-[#1E2328]">
+                {totalFood}
+              </div>
             </div>
-            <div className="text-2xl font-black font-mono-retro text-[#1E2328]">
-              {highScore}
+
+            <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
+              <div className="text-[10px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
+                {t(lang, 'play_time')}
+              </div>
+              <div className="text-base sm:text-lg font-black font-mono-retro text-[#1E2328]">
+                {formatDuration(totalPlayTime, lang)}
+              </div>
+            </div>
+
+            <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
+              <div className="text-[10px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
+                {t(lang, 'rank_label', { rank: '' }).replace(':', '')}
+              </div>
+              <div className="text-xs font-bold font-mono-retro truncate text-[#1E2328] mt-1">
+                {currentRank}
+              </div>
             </div>
           </div>
 
-          <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
-            <div className="text-[11px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
-              {lang === 'tr' ? 'TOPLAM YEMEK' : 'TOTAL FOOD'}
+          {/* Secondary Stats (FR-17) */}
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-white/40 p-2 rounded-lg border border-[#3A3F44]/15">
+              <div className="text-[10px] font-bold font-mono-retro opacity-75">
+                {t(lang, 'longest_snake')}
+              </div>
+              <div className="text-lg font-black font-mono-retro text-[#1E2328]">
+                {careerStats.longestSnake}
+              </div>
             </div>
-            <div className="text-2xl font-black font-mono-retro text-[#1E2328]">
-              {totalFood}
+
+            <div className="bg-white/40 p-2 rounded-lg border border-[#3A3F44]/15">
+              <div className="text-[10px] font-bold font-mono-retro opacity-75">
+                {t(lang, 'highest_level')}
+              </div>
+              <div className="text-lg font-black font-mono-retro text-[#1E2328]">
+                Lvl {careerStats.highestLevel}
+              </div>
+            </div>
+
+            <div className="bg-white/40 p-2 rounded-lg border border-[#3A3F44]/15">
+              <div className="text-[10px] font-bold font-mono-retro opacity-75">
+                {t(lang, 'avg_duration')}
+              </div>
+              <div className="text-lg font-black font-mono-retro text-[#1E2328]">
+                {careerStats.averageGameDurationSeconds}s
+              </div>
             </div>
           </div>
 
-          <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
-            <div className="text-[11px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
-              {t(lang, 'play_time')}
-            </div>
-            <div className="text-2xl font-black font-mono-retro text-[#1E2328]">
-              {formatDuration(totalPlayTime, lang)}
-            </div>
+          {/* Rank Progress Bar */}
+          <div className="bg-white/40 p-3 rounded-xl border border-[#3A3F44]/20">
+            <RankProgress score={highScore} lang={lang} />
           </div>
 
-          <div className="bg-white/40 p-2.5 rounded-lg border border-[#3A3F44]/15">
-            <div className="text-[11px] uppercase tracking-wide font-bold opacity-75 font-mono-retro">
-              {t(lang, 'rank_label', { rank: '' }).replace(':', '')}
-            </div>
-            <div className="text-sm font-bold font-mono-retro truncate text-[#1E2328]">
-              {currentRank}
-            </div>
-          </div>
-        </div>
+          {/* Daily Quests (FR-15) */}
+          <QuestPanel quests={dailyQuests} lang={lang} />
 
-        {/* Achievements Progress bar */}
-        <div className="px-6 py-2.5 bg-black/10 flex items-center justify-between text-xs font-bold font-mono-retro">
-          <span>{lang === 'tr' ? 'BAŞARIMLAR' : 'ACHIEVEMENTS'}</span>
-          <span>
-            {unlockedCount} / {ALL_ACHIEVEMENTS.length}
-          </span>
-        </div>
+          {/* Achievements Progress bar */}
+          <div className="pt-2">
+            <div className="px-3 py-2 bg-black/10 rounded-lg flex items-center justify-between text-xs font-bold font-mono-retro mb-2">
+              <span>{lang === 'tr' ? 'BAŞARIMLAR' : 'ACHIEVEMENTS'}</span>
+              <span>
+                {unlockedCount} / {ALL_ACHIEVEMENTS.length}
+              </span>
+            </div>
 
-        {/* Achievements List */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-2.5">
+            {/* Achievements List */}
+            <div className="space-y-2">
           {ALL_ACHIEVEMENTS.map((item) => {
             const isUnlocked = achievementsManager.isUnlocked(item.id);
             return (
@@ -146,6 +189,8 @@ export const CareerModal: React.FC<CareerModalProps> = ({
               </div>
             );
           })}
+            </div>
+          </div>
         </div>
 
         {/* Footer */}

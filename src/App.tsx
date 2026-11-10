@@ -7,6 +7,10 @@ import {
   ThemeColors,
   GameOverData,
   GameData,
+  ButtonSize,
+  HandOrientation,
+  DifficultyProfile,
+  GameMode,
 } from './types.ts';
 import {
   GameLogic,
@@ -18,9 +22,14 @@ import { PauseScreen } from './components/PauseScreen.tsx';
 import { GameOverScreen } from './components/GameOverScreen.tsx';
 import { CareerModal } from './components/CareerModal.tsx';
 import { SettingsModal } from './components/SettingsModal.tsx';
+import { MazeEditorScreen } from './components/MazeEditorScreen.tsx';
 import { Toast, ToastMessage } from './components/Toast.tsx';
 import { soundManager } from './utils/soundManager.ts';
 import { achievementsManager, type AchievementItem } from './utils/achievementsManager.ts';
+import { difficultyManager } from './utils/difficultyManager.ts';
+import { particleSystem } from './utils/particles.ts';
+import { careerManager } from './utils/career.ts';
+import { questManager } from './utils/quests.ts';
 import { vibrate } from './utils/haptics.ts';
 import { t } from './utils/translations.ts';
 import { STORAGE_KEYS, storage } from './utils/storage.ts';
@@ -28,7 +37,7 @@ import { createInitialGameState, gameReducer } from './utils/gameReducer.ts';
 import { createRandomSeed, currentTimeMs } from './utils/time.ts';
 import confetti from 'canvas-confetti';
 
-type Screen = 'menu' | 'game' | 'pause' | 'game_over';
+type Screen = 'menu' | 'game' | 'pause' | 'game_over' | 'maze_editor';
 
 export const App: React.FC = () => {
   // Localization & Settings
@@ -40,6 +49,27 @@ export const App: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     return soundManager.getSoundEnabled();
   });
+  const [vibrationEnabled, setVibrationEnabled] = useState<boolean>(() => {
+    return storage.getItem(STORAGE_KEYS.vibrationEnabled) !== 'false';
+  });
+  const [difficultyProfile, setDifficultyProfile] = useState<DifficultyProfile>(() => {
+    return difficultyManager.getProfile();
+  });
+  const [buttonSize, setButtonSize] = useState<ButtonSize>(() => {
+    const saved = storage.getItem(STORAGE_KEYS.buttonSize);
+    return (saved === 'small' || saved === 'medium' || saved === 'large') ? saved : 'medium';
+  });
+  const [handOrientation, setHandOrientation] = useState<HandOrientation>(() => {
+    const saved = storage.getItem(STORAGE_KEYS.handOrientation);
+    return (saved === 'right' || saved === 'left') ? saved : 'right';
+  });
+  const [selectedMode, setSelectedMode] = useState<GameMode>(() => {
+    const saved = storage.getItem(STORAGE_KEYS.selectedMode);
+    return (saved === 'classic' || saved === 'maze' || saved === 'time_attack' || saved === 'survival')
+      ? saved
+      : 'maze';
+  });
+
   const [lcdEffectsEnabled, setLcdEffectsEnabled] = useState(
     () => storage.getItem(STORAGE_KEYS.lcdEffectsEnabled) !== 'false'
   );
@@ -60,12 +90,19 @@ export const App: React.FC = () => {
 
   const [colors, setColors] = useState<ThemeColors>(() => {
     return {
-      snakeHead: storage.getItem(STORAGE_KEYS.customSnakeHeadColor) || DefaultColors.SNAKE_HEAD,
-      snakeBody: storage.getItem(STORAGE_KEYS.customSnakeBodyColor) || DefaultColors.SNAKE_BODY,
-      food: storage.getItem(STORAGE_KEYS.customFoodColor) || DefaultColors.FOOD,
-      map: storage.getItem(STORAGE_KEYS.customMapColor) || DefaultColors.NOKIA_BG,
+      snakeHead: storage.getItem(STORAGE_KEYS.customSnakeHeadColor) || DefaultColors.snakeHead,
+      snakeBody: storage.getItem(STORAGE_KEYS.customSnakeBodyColor) || DefaultColors.snakeBody,
+      food: storage.getItem(STORAGE_KEYS.customFoodColor) || DefaultColors.food,
+      map: storage.getItem(STORAGE_KEYS.customMapColor) || DefaultColors.map,
+      obstacle: DefaultColors.obstacle,
+      bonusOuter: DefaultColors.bonusOuter,
+      bonusInner: DefaultColors.bonusInner,
+      grid: DefaultColors.grid,
+      particle: DefaultColors.particle,
     };
   });
+
+  const [bonusRemainingMs, setBonusRemainingMs] = useState<number>(0);
 
   // Modals
   const [isCareerOpen, setIsCareerOpen] = useState(false);
@@ -179,6 +216,33 @@ export const App: React.FC = () => {
   const handleSelectControlMode = (mode: ControlMode) => {
     setControlMode(mode);
     storage.setItem(STORAGE_KEYS.controlMode, mode);
+  };
+
+  const handleToggleVibration = (enabled: boolean) => {
+    setVibrationEnabled(enabled);
+    storage.setItem(STORAGE_KEYS.vibrationEnabled, String(enabled));
+  };
+
+  const handleSelectDifficultyProfile = (profile: DifficultyProfile) => {
+    setDifficultyProfile(profile);
+    difficultyManager.setProfile(profile);
+    storage.setItem(STORAGE_KEYS.difficultyProfile, profile);
+    dispatch({ type: 'SET_DIFFICULTY_PROFILE', profile });
+  };
+
+  const handleSelectButtonSize = (size: ButtonSize) => {
+    setButtonSize(size);
+    storage.setItem(STORAGE_KEYS.buttonSize, size);
+  };
+
+  const handleSelectHandOrientation = (orientation: HandOrientation) => {
+    setHandOrientation(orientation);
+    storage.setItem(STORAGE_KEYS.handOrientation, orientation);
+  };
+
+  const handleSelectMode = (mode: GameMode) => {
+    setSelectedMode(mode);
+    storage.setItem(STORAGE_KEYS.selectedMode, mode);
   };
 
   // Queue direction change
@@ -505,6 +569,7 @@ export const App: React.FC = () => {
       wallHit: wallHitRef.current,
       mazePasses: mazePassesRef.current,
       usedSingleDirection: directionsUsedRef.current.size === 1,
+      mode: selectedMode,
     };
 
     const fullGameData: GameData = {
@@ -525,12 +590,38 @@ export const App: React.FC = () => {
       diedFast:
         currentTimeMs() - gameStartTimeRef.current < GameLogic.FAST_DEATH_THRESHOLD_MS &&
         !diedToOwnTail,
+      mode: selectedMode,
     };
 
     achievementsManager.checkAchievements(fullGameData, handleAchievementUnlocked);
 
+    // Record in CareerManager (FR-17)
+    const level = difficultyManager.getLevel(finalScore);
+    careerManager.recordSession(gameOverData, sessionDurationSeconds, snake.length, level);
+
+    // Process daily quests (FR-15)
+    questManager.processGameSession(gameOverData, (unlockedQuest) => {
+      soundManager.playBonusEat();
+      enqueueToast({
+        id: unlockedQuest.id,
+        type: 'achievement',
+        title: lang === 'tr' ? 'Görev Tamamlandı!' : 'Quest Completed!',
+        message: t(lang, unlockedQuest.titleKey),
+      });
+    });
+
     setScreen('game_over');
-  }, [clearSavedGame, handleAchievementUnlocked, score, totalFood, totalPlayTime]);
+  }, [
+    clearSavedGame,
+    handleAchievementUnlocked,
+    score,
+    totalFood,
+    totalPlayTime,
+    selectedMode,
+    snake.length,
+    enqueueToast,
+    lang,
+  ]);
 
   // Process reducer events outside the pure game transition.
   useEffect(() => {
@@ -540,15 +631,22 @@ export const App: React.FC = () => {
 
     if (event.directionChanged) directionsUsedRef.current.add(event.directionChanged);
     if (event.wallHit) wallHitRef.current = true;
-    if (event.narrowPass) mazePassesRef.current += 1;
+    if (event.narrowPass) {
+      mazePassesRef.current += 1;
+      particleSystem.triggerNarrowPassSparks(snake[0], 20, colors.snakeHead);
+    }
 
     if (event.type === 'regular-food' || event.type === 'bonus-food') {
       sessionFoodEatenRef.current += 1;
+      particleSystem.triggerHeadSquash();
+      particleSystem.triggerBitePulse();
+
       if (event.type === 'bonus-food') {
         bonusFoodEatenRef.current += 1;
         bonusEatenFastRef.current ||= currentTimeMs() - bonusSpawnTimeRef.current <
           GameLogic.BONUS_FOOD_FAST_EAT_TIMEOUT_MS;
         bonusRemainingRef.current = 0;
+        setBonusRemainingMs(0);
         if (bonusTimeoutRef.current) clearTimeout(bonusTimeoutRef.current);
         bonusTimeoutRef.current = null;
         soundManager.playBonusEat();
@@ -559,6 +657,7 @@ export const App: React.FC = () => {
         if (event.score % GameLogic.BONUS_FOOD_SPAWN_INTERVAL === 0 && bonusFood) {
           bonusSpawnTimeRef.current = currentTimeMs();
           bonusRemainingRef.current = GameLogic.BONUS_FOOD_DISPLAY_TIMEOUT_MS;
+          setBonusRemainingMs(GameLogic.BONUS_FOOD_DISPLAY_TIMEOUT_MS);
         }
       }
 
@@ -567,6 +666,9 @@ export const App: React.FC = () => {
     }
 
     if (event.type === 'collision' || event.type === 'victory') {
+      if (event.type === 'collision') {
+        particleSystem.triggerCrashExplosion(snake, 20, colors.snakeHead);
+      }
       finishGame(
         event.diedToOwnTail,
         event.score,
@@ -580,6 +682,8 @@ export const App: React.FC = () => {
     finishGame,
     handleAchievementUnlocked,
     saveGameState,
+    snake,
+    colors.snakeHead,
   ]);
 
   useEffect(() => {
@@ -634,6 +738,38 @@ export const App: React.FC = () => {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [screen, snake, obstacles, direction, food, bonusFood, score, gameSpeed, saveGameState]);
+
+  // BFR-04-R: Update bonusRemainingMs smoothly for bonus countdown bar
+  useEffect(() => {
+    if (screen !== 'game' || countdown !== null || !bonusFood) {
+      setBonusRemainingMs(0);
+      return;
+    }
+    const timer = setInterval(() => {
+      const remaining = Math.max(0, bonusDeadlineRef.current - currentTimeMs());
+      setBonusRemainingMs(remaining);
+    }, 50);
+    return () => clearInterval(timer);
+  }, [screen, countdown, bonusFood]);
+
+  // BFR-03-R: Autosave on tab close, navigate away, or iOS Safari backgrounding (pagehide/beforeunload)
+  useEffect(() => {
+    const handlePersist = () => {
+      if (screen === 'game' || screen === 'pause') {
+        if (bonusFood && bonusTimeoutRef.current) {
+          bonusRemainingRef.current = Math.max(0, bonusDeadlineRef.current - currentTimeMs());
+        }
+        saveGameState();
+        setHasSavedGame(true);
+      }
+    };
+    window.addEventListener('beforeunload', handlePersist);
+    window.addEventListener('pagehide', handlePersist);
+    return () => {
+      window.removeEventListener('beforeunload', handlePersist);
+      window.removeEventListener('pagehide', handlePersist);
+    };
+  }, [screen, bonusFood, saveGameState]);
 
   // Back button in Game -> Pause menu
   const handleBackInGame = () => {
@@ -764,6 +900,14 @@ export const App: React.FC = () => {
         lang={lang}
         soundEnabled={soundEnabled}
         onToggleSound={handleToggleSound}
+        vibrationEnabled={vibrationEnabled}
+        onToggleVibration={handleToggleVibration}
+        difficultyProfile={difficultyProfile}
+        onSelectDifficultyProfile={handleSelectDifficultyProfile}
+        buttonSize={buttonSize}
+        onSelectButtonSize={handleSelectButtonSize}
+        handOrientation={handOrientation}
+        onSelectHandOrientation={handleSelectHandOrientation}
         lcdEffectsEnabled={lcdEffectsEnabled}
         onToggleLcdEffects={handleToggleLcdEffects}
         smoothMotionEnabled={smoothMotionEnabled}
@@ -783,24 +927,37 @@ export const App: React.FC = () => {
           lang={lang}
           highScore={highScore}
           hasSavedGame={hasSavedGame}
+          selectedMode={selectedMode}
+          onSelectMode={handleSelectMode}
           onToggleLang={handleToggleLang}
           onNewGame={startNewGame}
           onResume={resumeSavedGame}
           onCareer={openCareer}
           onSettings={openSettings}
+          onMazeEditor={() => setScreen('maze_editor')}
+        />
+      )}
+      {screen === 'maze_editor' && (
+        <MazeEditorScreen
+          lang={lang}
+          onBack={() => setScreen('menu')}
         />
       )}
       {screen === 'game' && (
         <GameScreen
           lang={lang}
           controlMode={controlMode}
+          buttonSize={buttonSize}
+          handOrientation={handOrientation}
           snake={snake}
           obstacles={obstacles}
           food={food}
           bonusFood={bonusFood}
+          bonusRemainingMs={bonusRemainingMs}
           direction={direction}
           colors={colors}
           score={score}
+          level={difficultyManager.getLevel(score)}
           countdown={countdown}
           gameSpeed={gameSpeed}
           lcdEffectsEnabled={lcdEffectsEnabled}

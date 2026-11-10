@@ -1,5 +1,7 @@
 import { GameLogic } from '../constants/gameConstants.ts';
 import { Direction, Point } from '../types.ts';
+import { isPathAvailable } from './pathfinding.ts';
+import { difficultyManager, DifficultyProfile } from './difficultyManager.ts';
 
 export interface GameEngineState {
   snake: Point[];
@@ -13,6 +15,7 @@ export interface GameEngineState {
   lastNarrowCell: Point | null;
   eventId: number;
   event: GameEvent | null;
+  difficultyProfile?: DifficultyProfile;
 }
 
 export interface GameEvent {
@@ -31,6 +34,7 @@ export type GameAction =
   | { type: 'RESTORE'; state: GameEngineState }
   | { type: 'QUEUE_DIRECTION'; direction: Direction }
   | { type: 'CLEAR_BONUS' }
+  | { type: 'SET_DIFFICULTY_PROFILE'; profile: DifficultyProfile }
   | { type: 'TICK'; randomSeed: number };
 
 export function createInitialGameState(): GameEngineState {
@@ -48,6 +52,7 @@ export function createInitialGameState(): GameEngineState {
     lastNarrowCell: null,
     eventId: 0,
     event: null,
+    difficultyProfile: difficultyManager.getProfile(),
   };
 }
 
@@ -73,11 +78,13 @@ function freeCells(
   exclude: Array<Point | null>,
   random: () => number
 ): Point | null {
-  const occupied = new Set([
-    ...snake.map(([x, y]) => `${x},${y}`),
-    ...obstacles.map(([x, y]) => `${x},${y}`),
-    ...exclude.filter((point): point is Point => point !== null).map(([x, y]) => `${x},${y}`),
-  ]);
+  const occupied = new Set<string>();
+  for (const [sx, sy] of snake) occupied.add(`${sx},${sy}`);
+  for (const [ox, oy] of obstacles) occupied.add(`${ox},${oy}`);
+  for (const point of exclude) {
+    if (point !== null) occupied.add(`${point[0]},${point[1]}`);
+  }
+
   const free: Point[] = [];
   for (let x = 0; x < GameLogic.DEFAULT_GRID_SIZE; x += 1) {
     for (let y = 0; y < GameLogic.DEFAULT_GRID_HEIGHT; y += 1) {
@@ -94,6 +101,13 @@ function addObstacle(
   bonusFood: Point | null,
   random: () => number
 ): Point[] {
+  const head = snake[0];
+  const occupied = new Set<string>();
+  for (const [sx, sy] of snake) occupied.add(`${sx},${sy}`);
+  for (const [ox, oy] of obstacles) occupied.add(`${ox},${oy}`);
+  occupied.add(`${food[0]},${food[1]}`);
+  if (bonusFood) occupied.add(`${bonusFood[0]},${bonusFood[1]}`);
+
   for (let attempt = 0; attempt < 80; attempt += 1) {
     const startX = Math.floor(random() * (GameLogic.DEFAULT_GRID_SIZE - 4)) + 2;
     const startY = Math.floor(random() * (GameLogic.DEFAULT_GRID_HEIGHT - 4)) + 2;
@@ -103,25 +117,35 @@ function addObstacle(
       [startX, startY + 1],
       [startX + 1, startY + 1],
     ];
-    const isClear = cells.every(
-      ([x, y]) =>
-        !snake.some(([sx, sy]) => sx === x && sy === y) &&
-        (food[0] !== x || food[1] !== y) &&
-        (!bonusFood || bonusFood[0] !== x || bonusFood[1] !== y) &&
-        !obstacles.some(([ox, oy]) => ox === x && oy === y)
-    );
-    if (isClear) return [...obstacles, ...cells];
+
+    const isClear = cells.every(([x, y]) => !occupied.has(`${x},${y}`));
+    if (isClear) {
+      const candidateObstacles = [...obstacles, ...cells];
+      // BFR-20: BFS verification - ensure path from head to food remains accessible
+      const pathOk = isPathAvailable(
+        head,
+        food,
+        candidateObstacles,
+        GameLogic.DEFAULT_GRID_SIZE,
+        GameLogic.DEFAULT_GRID_HEIGHT,
+        snake.slice(1) // exclude head itself as obstacle for path check
+      );
+      if (pathOk) {
+        return candidateObstacles;
+      }
+    }
   }
   return obstacles;
 }
 
-function isNarrowPass(cell: Point, obstacles: Point[]) {
+function isNarrowPass(cell: Point, obstaclesSet: Set<string>) {
   const blocked = (x: number, y: number) =>
     x < 0 ||
     x >= GameLogic.DEFAULT_GRID_SIZE ||
     y < 0 ||
     y >= GameLogic.DEFAULT_GRID_HEIGHT ||
-    obstacles.some(([ox, oy]) => ox === x && oy === y);
+    obstaclesSet.has(`${x},${y}`);
+
   return (
     (blocked(cell[0] - 1, cell[1]) && blocked(cell[0] + 1, cell[1])) ||
     (blocked(cell[0], cell[1] - 1) && blocked(cell[0], cell[1] + 1))
@@ -162,6 +186,9 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
     }
     case 'CLEAR_BONUS':
       return state.bonusFood ? { ...state, bonusFood: null } : state;
+    case 'SET_DIFFICULTY_PROFILE':
+      difficultyManager.setProfile(action.profile);
+      return { ...state, difficultyProfile: action.profile };
     case 'TICK': {
       const random = nextRandom(action.randomSeed);
       const requestedDirection = state.directionQueue[0];
@@ -179,22 +206,47 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
         nextX >= GameLogic.DEFAULT_GRID_SIZE ||
         nextY < 0 ||
         nextY >= GameLogic.DEFAULT_GRID_HEIGHT;
+
       if (nextX < 0) nextX = GameLogic.DEFAULT_GRID_SIZE - 1;
       else if (nextX >= GameLogic.DEFAULT_GRID_SIZE) nextX = 0;
       if (nextY < 0) nextY = GameLogic.DEFAULT_GRID_HEIGHT - 1;
       else if (nextY >= GameLogic.DEFAULT_GRID_HEIGHT) nextY = 0;
+
       const head: Point = [nextX, nextY];
+      const headKey = `${nextX},${nextY}`;
+
+      // Set-based O(1) obstacles lookup
+      const obstaclesSet = new Set<string>();
+      for (const [ox, oy] of state.obstacles) obstaclesSet.add(`${ox},${oy}`);
+
       const isNarrow =
         state.snake.length > GameLogic.MIN_SNAKE_LENGTH_FOR_NARROW_PASS &&
-        isNarrowPass(head, state.obstacles);
+        isNarrowPass(head, obstaclesSet);
       const narrowPass =
         isNarrow &&
         (!state.lastNarrowCell ||
           state.lastNarrowCell[0] !== head[0] ||
           state.lastNarrowCell[1] !== head[1]);
       const lastNarrowCell = isNarrow ? head : null;
-      const hitOwnTail = state.snake.some(([x, y]) => x === head[0] && y === head[1]);
-      const hitObstacle = state.obstacles.some(([x, y]) => x === head[0] && y === head[1]);
+
+      // Check whether this tick eats food
+      const eatsRegularFood = head[0] === state.food[0] && head[1] === state.food[1];
+      const eatsBonusFood = Boolean(
+        state.bonusFood && head[0] === state.bonusFood[0] && head[1] === state.bonusFood[1]
+      );
+      const growsThisTick = eatsRegularFood || eatsBonusFood;
+
+      // BFR-18: Tail-Follow collision logic (P0)
+      // If the snake grows (eats food), tail remains in place -> entire snake is checked.
+      // If normal movement (does not eat), tail vacates this tick -> tail cell is SAFE!
+      // Only check body without the tail: snake.slice(0, -1)
+      const bodyToCheck = growsThisTick ? state.snake : state.snake.slice(0, -1);
+      const bodySet = new Set<string>();
+      for (const [bx, by] of bodyToCheck) bodySet.add(`${bx},${by}`);
+
+      const hitOwnTail = bodySet.has(headKey);
+      const hitObstacle = obstaclesSet.has(headKey);
+
       const snake = [head, ...state.snake];
       const movedState = {
         ...state,
@@ -202,6 +254,7 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
         directionQueue,
         lastNarrowCell,
       };
+
       if (hitOwnTail || hitObstacle) {
         return withEvent(movedState, {
           type: 'collision',
@@ -213,15 +266,18 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
         });
       }
 
-      if (state.bonusFood && head[0] === state.bonusFood[0] && head[1] === state.bonusFood[1]) {
+      // Bonus Food eaten
+      if (eatsBonusFood) {
         const tail = state.snake[state.snake.length - 1];
-        snake.push(tail, tail);
+        snake.push(tail, tail); // grows +2 segments
         const score = state.score + GameLogic.BONUS_POINTS;
-        const level = Math.floor(score / 10);
+
+        const maxObs = difficultyManager.getMaxObstacles(score);
         const obstacles =
-          level > 0 && state.obstacles.length < level * 4
+          score >= difficultyManager.getObstacleThreshold() && state.obstacles.length < maxObs
             ? addObstacle(state.obstacles, snake, state.food, null, random)
             : state.obstacles;
+
         return withEvent(
           {
             ...movedState,
@@ -241,21 +297,26 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
         );
       }
 
-      if (head[0] === state.food[0] && head[1] === state.food[1]) {
+      // Regular Food eaten
+      if (eatsRegularFood) {
         const score = state.score + GameLogic.REGULAR_POINTS;
         const gameSpeed = Math.max(
           GameLogic.MIN_SPEED,
           state.gameSpeed - GameLogic.SPEED_INCREMENT
         );
-        const level = Math.floor(score / 10);
+
+        const maxObs = difficultyManager.getMaxObstacles(score);
         const obstacles =
-          level > 0 && state.obstacles.length < level * 4
+          score >= difficultyManager.getObstacleThreshold() && state.obstacles.length < maxObs
             ? addObstacle(state.obstacles, snake, state.food, state.bonusFood, random)
             : state.obstacles;
+
+        const bonusInterval = difficultyManager.getBonusInterval();
         const bonusFood =
-          score > 0 && score % GameLogic.BONUS_FOOD_SPAWN_INTERVAL === 0
+          score > 0 && score % bonusInterval === 0
             ? freeCells(snake, obstacles, [state.food], random)
             : state.bonusFood;
+
         const food = freeCells(snake, obstacles, [bonusFood], random);
         if (!food) {
           return withEvent(
@@ -284,6 +345,7 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
         );
       }
 
+      // Normal movement: pop tail
       snake.pop();
       if (directionChanged || wallHit || narrowPass) {
         return withEvent(

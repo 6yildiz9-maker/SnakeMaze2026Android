@@ -1,3 +1,5 @@
+import { ThemeColors } from '../types.ts';
+
 export const GameLogic = {
   DEFAULT_GRID_SIZE: 20,
   DEFAULT_GRID_HEIGHT: 20,
@@ -41,32 +43,36 @@ export const AchievementThresholds = {
   TIME_TRAVELER_SECONDS: 3600,
 };
 
-export const DefaultColors = {
-  NOKIA_BG: '#C7F0D8',
-  NOKIA_DARK: '#3A3F44',
-  NOKIA_GRID: '#A2C5B1',
-  SNAKE_BODY: '#000000',
-  SNAKE_HEAD: '#555555',
-  FOOD: '#FF0000',
-  OBSTACLE: '#424242',
-  BONUS_FOOD_OUTER: '#FFFF00',
-  BONUS_FOOD_INNER: '#FF00FF',
-  EYES: '#FFFFFF',
-  PUPILS: '#000000',
-  ACHIEVEMENT_LOCKED_BG: '#333333',
-  ACHIEVEMENT_LOCKED_TEXT: '#AAAAAA',
-  ACHIEVEMENT_UNLOCKED_BG: '#C8E6C9',
-  ACHIEVEMENT_UNLOCKED_TEXT: '#000000',
+export const DefaultColors: ThemeColors = {
+  map: '#C7F0D8',
+  snakeBody: '#000000',
+  snakeHead: '#555555',
+  food: '#FF0000',
+  obstacle: '#424242',
+  bonusOuter: '#FFFF00',
+  bonusInner: '#FF00FF',
+  grid: '#A2C5B1',
+  particle: '#2E7D32',
 };
 
-export const PRESET_THEMES = [
+export interface PresetTheme extends ThemeColors {
+  id: string;
+  name: string;
+}
+
+export const PRESET_THEMES: PresetTheme[] = [
   {
     id: 'nokia_classic',
     name: 'Nokia Classic',
     snakeHead: '#555555',
     snakeBody: '#000000',
-    food: '#FF0000',
+    food: '#D32F2F',
     map: '#C7F0D8',
+    obstacle: '#3A3F44',
+    bonusOuter: '#FFD700',
+    bonusInner: '#E91E63',
+    grid: '#A2C5B1',
+    particle: '#2E7D32',
   },
   {
     id: 'gameboy_amber',
@@ -75,6 +81,11 @@ export const PRESET_THEMES = [
     snakeBody: '#0F2C05',
     food: '#D04020',
     map: '#9BBC0F',
+    obstacle: '#1C3E08',
+    bonusOuter: '#D9FF2E',
+    bonusInner: '#8BAC0F',
+    grid: '#8BAC0F',
+    particle: '#2A4D15',
   },
   {
     id: 'cyberpunk_neon',
@@ -83,6 +94,11 @@ export const PRESET_THEMES = [
     snakeBody: '#7000FF',
     food: '#FF0077',
     map: '#0D0E1A',
+    obstacle: '#3D155F',
+    bonusOuter: '#FFE600',
+    bonusInner: '#00F0FF',
+    grid: '#222340',
+    particle: '#00F0FF',
   },
   {
     id: 'monochrome_dark',
@@ -91,6 +107,11 @@ export const PRESET_THEMES = [
     snakeBody: '#009933',
     food: '#FFFFFF',
     map: '#121512',
+    obstacle: '#1F3824',
+    bonusOuter: '#33FF77',
+    bonusInner: '#009933',
+    grid: '#1B261D',
+    particle: '#00FF66',
   },
   {
     id: 'sunset_orange',
@@ -99,6 +120,11 @@ export const PRESET_THEMES = [
     snakeBody: '#990033',
     food: '#FFDD00',
     map: '#FFE8D6',
+    obstacle: '#6B2D3A',
+    bonusOuter: '#FF8800',
+    bonusInner: '#FF0055',
+    grid: '#E8C5AF',
+    particle: '#FF3366',
   },
   {
     id: 'nokia_3310',
@@ -107,6 +133,11 @@ export const PRESET_THEMES = [
     snakeBody: '#222A26',
     food: '#B53434',
     map: '#C6E2CB',
+    obstacle: '#2B3B34',
+    bonusOuter: '#E2A829',
+    bonusInner: '#C23E3E',
+    grid: '#A7C7AE',
+    particle: '#222A26',
   },
   {
     id: 'gameboy_1989',
@@ -115,6 +146,11 @@ export const PRESET_THEMES = [
     snakeBody: '#1C2A1D',
     food: '#A34E3C',
     map: '#B7C49B',
+    obstacle: '#2F402D',
+    bonusOuter: '#D2DB69',
+    bonusInner: '#8F9C4D',
+    grid: '#9EA883',
+    particle: '#344A31',
   },
   {
     id: 'cyberpunk_2077',
@@ -123,6 +159,11 @@ export const PRESET_THEMES = [
     snakeBody: '#00A8B5',
     food: '#FF4D8D',
     map: '#21152C',
+    obstacle: '#542368',
+    bonusOuter: '#FCEE09',
+    bonusInner: '#FF0055',
+    grid: '#362145',
+    particle: '#00E5FF',
   },
   {
     id: 'pip_boy',
@@ -131,6 +172,11 @@ export const PRESET_THEMES = [
     snakeBody: '#39B54A',
     food: '#E8FF79',
     map: '#101B12',
+    obstacle: '#1E3E23',
+    bonusOuter: '#B8FF85',
+    bonusInner: '#2FA83E',
+    grid: '#182C1B',
+    particle: '#8CFF73',
   },
   {
     id: 'paper_sketch',
@@ -139,5 +185,10 @@ export const PRESET_THEMES = [
     snakeBody: '#686868',
     food: '#C63838',
     map: '#F3EBD8',
+    obstacle: '#554E44',
+    bonusOuter: '#D4A017',
+    bonusInner: '#A83232',
+    grid: '#DDD2BA',
+    particle: '#424242',
   },
 ];

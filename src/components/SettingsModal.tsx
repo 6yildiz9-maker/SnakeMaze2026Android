@@ -1,12 +1,12 @@
 import React from 'react';
-import { ControlMode, Language, ThemeColors } from '../types.ts';
+import { ButtonSize, ControlMode, DifficultyProfile, HandOrientation, Language, ThemeColors } from '../types.ts';
 import { SnakeCanvas } from './SnakeCanvas.tsx';
 import { soundManager } from '../utils/soundManager.ts';
 import { t } from '../utils/translations.ts';
 import { useDialogAccessibility } from '../hooks/useDialogAccessibility.ts';
 import { STORAGE_KEYS, storage } from '../utils/storage.ts';
 import { PRESET_THEMES } from '../constants/gameConstants.ts';
-import { Volume2, VolumeX, Shuffle, X, Palette, Sliders } from 'lucide-react';
+import { Volume2, VolumeX, Shuffle, X, Palette, Sliders, Smartphone, Gauge, Move } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -14,6 +14,14 @@ interface SettingsModalProps {
   lang: Language;
   soundEnabled: boolean;
   onToggleSound: (enabled: boolean) => void;
+  vibrationEnabled: boolean;
+  onToggleVibration: (enabled: boolean) => void;
+  difficultyProfile: DifficultyProfile;
+  onSelectDifficultyProfile: (profile: DifficultyProfile) => void;
+  buttonSize: ButtonSize;
+  onSelectButtonSize: (size: ButtonSize) => void;
+  handOrientation: HandOrientation;
+  onSelectHandOrientation: (orientation: HandOrientation) => void;
   controlMode: ControlMode;
   onSelectControlMode: (mode: ControlMode) => void;
   colors: ThemeColors;
@@ -34,6 +42,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   lang,
   soundEnabled,
   onToggleSound,
+  vibrationEnabled,
+  onToggleVibration,
+  difficultyProfile,
+  onSelectDifficultyProfile,
+  buttonSize,
+  onSelectButtonSize,
+  handOrientation,
+  onSelectHandOrientation,
   controlMode,
   onSelectControlMode,
   colors,
@@ -72,6 +88,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       snakeBody: randomHex(),
       food: randomHex(),
       map: randomHex(),
+      obstacle: randomHex(),
+      bonusOuter: randomHex(),
+      bonusInner: randomHex(),
+      grid: randomHex(),
+      particle: randomHex(),
     };
     onUpdateColors(newColors);
     storage.setItem(STORAGE_KEYS.usedCustomTheme, 'true');
@@ -84,6 +105,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       snakeBody: theme.snakeBody,
       food: theme.food,
       map: theme.map,
+      obstacle: theme.obstacle,
+      bonusOuter: theme.bonusOuter,
+      bonusInner: theme.bonusInner,
+      grid: theme.grid,
+      particle: theme.particle,
     });
     // track presets used
     const used = storage.getJson<string[]>(STORAGE_KEYS.usedPresetThemes, []);
@@ -128,76 +154,131 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
           </button>
         </div>
 
-        <label className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 font-bold font-mono-retro">
-          <span>{t(lang, 'lcd_effects')}</span>
-          <input
-            type="checkbox"
-            checked={lcdEffectsEnabled}
-            onChange={(event) => onToggleLcdEffects(event.target.checked)}
-            aria-label={t(lang, 'lcd_effects')}
-          />
-        </label>
-
-        <label className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 font-bold font-mono-retro">
-          <span>{t(lang, 'smooth_motion')}</span>
-          <input
-            type="checkbox"
-            checked={smoothMotionEnabled}
-            onChange={(event) => onToggleSmoothMotion(event.target.checked)}
-            aria-label={t(lang, 'smooth_motion')}
-          />
-        </label>
-        <label className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 font-bold font-mono-retro">
-          <span>{t(lang, 'music_settings')}</span>
-          <input
-            type="checkbox"
-            checked={musicEnabled}
-            onChange={(event) => onToggleMusic(event.target.checked)}
-            aria-label={t(lang, 'music_settings')}
-          />
-        </label>
-        <label className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 font-bold font-mono-retro">
-          <span>{t(lang, 'rank_decorations')}</span>
-          <input
-            type="checkbox"
-            checked={rankDecorationsEnabled}
-            onChange={(event) => onToggleRankDecorations(event.target.checked)}
-            aria-label={t(lang, 'rank_decorations')}
-          />
-        </label>
-
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
-          {/* Sound Toggle */}
-          <div className="flex items-center justify-between p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20">
-            <div className="flex items-center gap-2.5">
-              {soundEnabled ? (
-                <Volume2 className="w-5 h-5 text-[#3A3F44]" />
-              ) : (
-                <VolumeX className="w-5 h-5 text-red-500" />
-              )}
-              <span className="font-bold font-mono-retro text-base">
-                {t(lang, 'sound_settings')}
-              </span>
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+          {/* Audio & Haptics Section */}
+          <div className="p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 space-y-3">
+            <div className="text-xs font-bold font-mono-retro uppercase tracking-wider text-[#3A3F44]/80">
+              {lang === 'tr' ? 'SES & TİTREŞİM' : 'SOUND & HAPTICS'}
             </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                checked={soundEnabled}
-                onChange={(e) => {
-                  soundManager.playButtonClick();
-                  onToggleSound(e.target.checked);
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-12 h-6 bg-gray-400 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3A3F44]" />
-            </label>
+            
+            {/* Sound Toggle */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                {soundEnabled ? (
+                  <Volume2 className="w-5 h-5 text-[#3A3F44]" />
+                ) : (
+                  <VolumeX className="w-5 h-5 text-red-500" />
+                )}
+                <span className="font-bold font-mono-retro text-sm">
+                  {t(lang, 'sound_settings')}
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={soundEnabled}
+                  onChange={(e) => {
+                    soundManager.playButtonClick();
+                    onToggleSound(e.target.checked);
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-400 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3A3F44]" />
+              </label>
+            </div>
+
+            {/* Music Toggle */}
+            <div className="flex items-center justify-between pt-1 border-t border-[#3A3F44]/15">
+              <span className="font-bold font-mono-retro text-sm">
+                {t(lang, 'music_settings')}
+              </span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={musicEnabled}
+                  onChange={(e) => {
+                    soundManager.playButtonClick();
+                    onToggleMusic(e.target.checked);
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-400 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3A3F44]" />
+              </label>
+            </div>
+
+            {/* Vibration Toggle */}
+            <div className="flex items-center justify-between pt-1 border-t border-[#3A3F44]/15">
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4 text-[#3A3F44]" />
+                <span className="font-bold font-mono-retro text-sm">
+                  {t(lang, 'vibration_setting')}
+                </span>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={vibrationEnabled}
+                  onChange={(e) => {
+                    soundManager.playButtonClick();
+                    onToggleVibration(e.target.checked);
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-400 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#3A3F44]" />
+              </label>
+            </div>
           </div>
 
-          {/* Control Mode */}
+          {/* Game Balance / Difficulty Profile (FR-10) */}
+          <div className="p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Gauge className="w-4 h-4 text-[#3A3F44]" />
+                <span className="font-bold font-mono-retro text-sm">
+                  {t(lang, 'difficulty_profile')}
+                </span>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playButtonClick();
+                  onSelectDifficultyProfile('modern');
+                }}
+                className={`p-2 rounded-lg border-2 text-xs font-bold font-mono-retro transition cursor-pointer ${
+                  difficultyProfile === 'modern'
+                    ? 'bg-[#3A3F44] text-[#C7F0D8] border-[#3A3F44]'
+                    : 'bg-white/50 text-[#3A3F44] border-[#3A3F44]/30 hover:bg-white/80'
+                }`}
+              >
+                {t(lang, 'profile_modern')}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  soundManager.playButtonClick();
+                  onSelectDifficultyProfile('retro');
+                }}
+                className={`p-2 rounded-lg border-2 text-xs font-bold font-mono-retro transition cursor-pointer ${
+                  difficultyProfile === 'retro'
+                    ? 'bg-[#3A3F44] text-[#C7F0D8] border-[#3A3F44]'
+                    : 'bg-white/50 text-[#3A3F44] border-[#3A3F44]/30 hover:bg-white/80'
+                }`}
+              >
+                {t(lang, 'profile_retro')}
+              </button>
+            </div>
+            <p className="text-[11px] text-[#3A3F44]/80 font-mono-retro">
+              {difficultyProfile === 'modern' ? t(lang, 'profile_modern_desc') : t(lang, 'profile_retro_desc')}
+            </p>
+          </div>
+
+          {/* Control Mode & Ergonomics (FR-12) */}
           <div className="p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="font-bold font-mono-retro text-base">
+              <span className="font-bold font-mono-retro text-sm">
                 {t(lang, 'control_mode_label')}
               </span>
               <button
@@ -211,7 +292,73 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </button>
             </div>
 
-            <div className="text-xs text-[#3A3F44]/80 font-mono-retro">
+            {/* Button Size selector */}
+            <div className="flex items-center justify-between pt-1 border-t border-[#3A3F44]/15">
+              <span className="font-bold font-mono-retro text-xs">
+                {t(lang, 'button_size')}
+              </span>
+              <div className="flex gap-1">
+                {(['small', 'medium', 'large'] as ButtonSize[]).map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      soundManager.playButtonClick();
+                      onSelectButtonSize(size);
+                    }}
+                    className={`px-2.5 py-1 text-[11px] font-bold rounded-md font-mono-retro transition cursor-pointer ${
+                      buttonSize === size
+                        ? 'bg-[#3A3F44] text-[#C7F0D8]'
+                        : 'bg-white/60 text-[#3A3F44] hover:bg-white'
+                    }`}
+                  >
+                    {size === 'small' ? t(lang, 'size_small') : size === 'large' ? t(lang, 'size_large') : t(lang, 'size_medium')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Hand Orientation (left/right mirroring) */}
+            <div className="flex items-center justify-between pt-1 border-t border-[#3A3F44]/15">
+              <div className="flex items-center gap-1.5">
+                <Move className="w-3.5 h-3.5 text-[#3A3F44]" />
+                <span className="font-bold font-mono-retro text-xs">
+                  {t(lang, 'hand_orientation')}
+                </span>
+              </div>
+              <div className="flex gap-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundManager.playButtonClick();
+                    onSelectHandOrientation('right');
+                  }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md font-mono-retro transition cursor-pointer ${
+                    handOrientation === 'right'
+                      ? 'bg-[#3A3F44] text-[#C7F0D8]'
+                      : 'bg-white/60 text-[#3A3F44] hover:bg-white'
+                  }`}
+                >
+                  {t(lang, 'hand_right')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    soundManager.playButtonClick();
+                    onSelectHandOrientation('left');
+                  }}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-md font-mono-retro transition cursor-pointer ${
+                    handOrientation === 'left'
+                      ? 'bg-[#3A3F44] text-[#C7F0D8]'
+                      : 'bg-white/60 text-[#3A3F44] hover:bg-white'
+                  }`}
+                >
+                  {t(lang, 'hand_left')}
+                </button>
+              </div>
+            </div>
+
+            <div className="text-xs text-[#3A3F44]/80 font-mono-retro pt-1">
               {controlMode === 'classic' &&
                 (lang === 'tr'
                   ? 'Klasik 2 tuş: Sol ve Sağ yönü sol/aşağı veya sağ/yukarı döndürür.'
@@ -225,6 +372,43 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   ? 'Kaydırma modu: Ekranda istediğiniz yöne kaydırın veya klavye kullanın.'
                   : 'Swipe mode: Touch/pointer gestures or keyboard WASD / Arrows.')}
             </div>
+          </div>
+
+          {/* Visual Settings */}
+          <div className="p-3.5 bg-white/40 rounded-xl border border-[#3A3F44]/20 space-y-2 font-mono-retro">
+            <div className="text-xs font-bold uppercase tracking-wider text-[#3A3F44]/80">
+              {lang === 'tr' ? 'GÖRSEL EFEKTLER' : 'VISUAL EFFECTS'}
+            </div>
+            <label className="flex items-center justify-between text-sm font-bold cursor-pointer">
+              <span>{t(lang, 'lcd_effects')}</span>
+              <input
+                type="checkbox"
+                checked={lcdEffectsEnabled}
+                onChange={(event) => onToggleLcdEffects(event.target.checked)}
+                className="w-4 h-4 cursor-pointer accent-[#3A3F44]"
+                aria-label={t(lang, 'lcd_effects')}
+              />
+            </label>
+            <label className="flex items-center justify-between text-sm font-bold cursor-pointer pt-1 border-t border-[#3A3F44]/15">
+              <span>{t(lang, 'smooth_motion')}</span>
+              <input
+                type="checkbox"
+                checked={smoothMotionEnabled}
+                onChange={(event) => onToggleSmoothMotion(event.target.checked)}
+                className="w-4 h-4 cursor-pointer accent-[#3A3F44]"
+                aria-label={t(lang, 'smooth_motion')}
+              />
+            </label>
+            <label className="flex items-center justify-between text-sm font-bold cursor-pointer pt-1 border-t border-[#3A3F44]/15">
+              <span>{t(lang, 'rank_decorations')}</span>
+              <input
+                type="checkbox"
+                checked={rankDecorationsEnabled}
+                onChange={(event) => onToggleRankDecorations(event.target.checked)}
+                className="w-4 h-4 cursor-pointer accent-[#3A3F44]"
+                aria-label={t(lang, 'rank_decorations')}
+              />
+            </label>
           </div>
 
           {/* Live Theme Preview */}

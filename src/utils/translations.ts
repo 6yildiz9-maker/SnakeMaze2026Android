@@ -58,6 +58,65 @@ export const translations = {
     music_settings: 'Background Music',
     rank_decorations: 'Rank Decorations',
     music_hint: 'Tip: enable background music in Settings for a chiptune soundtrack.',
+    ad_not_ready: 'Ad is not ready yet. Please try again later.',
+
+    // Modes
+    mode_maze: 'Maze (Obstacles)',
+    mode_maze_desc: 'Dynamic 2x2 maze obstacles spawn as you level up.',
+    mode_classic: 'Classic (No Walls)',
+    mode_classic_desc: 'Pure retro snake with wrapping borders and no obstacles.',
+    mode_time_attack: 'Time Attack',
+    mode_time_attack_desc: '60 seconds rush to eat as much food as possible.',
+    mode_survival: 'Survival',
+    mode_survival_desc: 'High starting speed and dense obstacles.',
+
+    // Balance Profiles
+    difficulty_profile: 'Game Balance',
+    profile_modern: 'Modern (Balanced)',
+    profile_retro: 'Retro (Classic v1.0)',
+    profile_modern_desc: 'Obstacles start at 40 points so early play is smooth.',
+    profile_retro_desc: 'Obstacles start at 10 points (original tough curve).',
+
+    // Control Ergonomics
+    button_size: 'Button Size',
+    size_small: 'Small',
+    size_medium: 'Medium',
+    size_large: 'Large',
+    hand_orientation: 'Hand Layout',
+    hand_right: 'Right-Handed',
+    hand_left: 'Left-Handed (Mirrored)',
+    vibration_setting: 'Vibration / Haptics',
+
+    // Daily Quests
+    quest_score_30: 'Score 30 points in a game',
+    quest_score_60: 'Score 60 points in a game',
+    quest_food_25: 'Eat 25 regular foods',
+    quest_food_50: 'Eat 50 regular foods',
+    quest_bonus_3: 'Catch 3 bonus foods',
+    quest_games_3: 'Play 3 games',
+
+    // Maze Editor & Extras
+    maze_editor: 'MAZE EDITOR',
+    custom_maze: 'Custom Maze',
+    avg_duration: 'Avg Duration',
+    longest_snake: 'Longest Snake',
+    highest_level: 'Highest Level',
+    level_label: 'Level {level}',
+    bonus_timer: 'BONUS TIME',
+
+    // Food Types
+    food_regular: 'Food',
+    food_regular_desc: '+1 point',
+    food_bonus: 'Bonus Food',
+    food_bonus_desc: '+3 points, +2 length',
+    food_golden: 'Golden Apple',
+    food_golden_desc: '+5 points',
+    food_ice: 'Ice Berry',
+    food_ice_desc: 'Slows snake temporarily',
+    food_poison: 'Poison Mushroom',
+    food_poison_desc: '-1 point',
+    food_mystery: 'Mystery Egg',
+    food_mystery_desc: 'Random effect',
 
     // Ranks
     rank_worm: 'Worm',
@@ -174,6 +233,64 @@ export const translations = {
     rank_decorations: 'Rütbe Süsleri',
     music_hint: 'İpucu: chiptune müzik için Ayarlar’dan arka plan müziğini açın.',
 
+    // Modes
+    mode_maze: 'Labirent (Engelli)',
+    mode_maze_desc: 'Skor arttıkça 2x2 labirent blokları oluşur.',
+    mode_classic: 'Klasik (Engelsiz)',
+    mode_classic_desc: 'Engelsiz, sarmal duvarlı saf retro yılan deneyimi.',
+    mode_time_attack: 'Zamana Karşı',
+    mode_time_attack_desc: '60 saniyede toplayabildiğin kadar yem topla.',
+    mode_survival: 'Hayatta Kalma',
+    mode_survival_desc: 'Yüksek başlangıç hızı ve yoğun engeller.',
+
+    // Balance Profiles
+    difficulty_profile: 'Oyun Dengesi',
+    profile_modern: 'Modern (Dengeli)',
+    profile_retro: 'Retro (Klasik v1.0)',
+    profile_modern_desc: 'Engeller 40 puanda başlar, alışma süresi sunar.',
+    profile_retro_desc: 'Engeller 10 puanda başlar (orijinal sert eğri).',
+
+    // Control Ergonomics
+    button_size: 'Tuş Boyutu',
+    size_small: 'Küçük',
+    size_medium: 'Orta',
+    size_large: 'Büyük',
+    hand_orientation: 'El Düzeni',
+    hand_right: 'Sağlak',
+    hand_left: 'Solak (Aynalı)',
+    vibration_setting: 'Titreşim / Haptik',
+
+    // Daily Quests
+    quest_score_30: 'Tek oyunda 30 puan yap',
+    quest_score_60: 'Tek oyunda 60 puan yap',
+    quest_food_25: '25 adet normal yem ye',
+    quest_food_50: '50 adet normal yem ye',
+    quest_bonus_3: '3 adet bonus yem yakala',
+    quest_games_3: '3 oyun oyna',
+
+    // Maze Editor & Extras
+    maze_editor: 'LABİRENT EDİTÖRÜ',
+    custom_maze: 'Özel Labirent',
+    avg_duration: 'Ort. Süre',
+    longest_snake: 'En Uzun Yılan',
+    highest_level: 'En Yüksek Seviye',
+    level_label: 'Seviye {level}',
+    bonus_timer: 'BONUS SÜRESİ',
+
+    // Food Types
+    food_regular: 'Normal Yem',
+    food_regular_desc: '+1 puan',
+    food_bonus: 'Bonus Yem',
+    food_bonus_desc: '+3 puan, +2 boy',
+    food_golden: 'Altın Elma',
+    food_golden_desc: '+5 puan',
+    food_ice: 'Buz Meyvesi',
+    food_ice_desc: 'Yılanı geçici yavaşlatır',
+    food_poison: 'Zehirli Mantar',
+    food_poison_desc: '-1 puan',
+    food_mystery: 'Gizemli Yumurta',
+    food_mystery_desc: 'Rastgele etki',
+
     // Ranks
     rank_worm: 'Solucan',
     rank_rookie_snake: 'Çaylak Yılan',
@@ -232,7 +349,9 @@ export const translations = {
   },
 };
 
-export function t(lang: Language, key: keyof typeof translations['en'], params?: Record<string, string | number>): string {
+export type TranslationKey = keyof typeof translations['en'];
+
+export function t(lang: Language, key: TranslationKey, params?: Record<string, string | number>): string {
   const dict = translations[lang] || translations.en;
   let str: string = (dict as Record<string, string>)[key] || (translations.en as Record<string, string>)[key] || key;
   if (params) {
