@@ -3,7 +3,7 @@ import { Direction, FoodType, GameMode, Point } from '../types.ts';
 import { GAME_MODES, GameModeConfig } from '../constants/gameModes.ts';
 import { applyFoodEffect } from './foodTypes.ts';
 import { isPathAvailable } from './pathfinding.ts';
-import { difficultyManager, DifficultyProfile } from './difficultyManager.ts';
+import { DIFFICULTY_PROFILES, DifficultyProfile } from './difficultyManager.ts';
 
 export interface GameEngineState {
   snake: Point[];
@@ -47,7 +47,8 @@ export type GameAction =
 
 export function createInitialGameState(
   mode: GameMode = 'maze',
-  customObstacles: Point[] = []
+  customObstacles: Point[] = [],
+  difficultyProfile: DifficultyProfile = 'modern'
 ): GameEngineState {
   const midX = Math.floor(GameLogic.DEFAULT_GRID_SIZE / 2);
   const midY = Math.floor(GameLogic.DEFAULT_GRID_HEIGHT / 2);
@@ -61,11 +62,11 @@ export function createInitialGameState(
     bonusFood: null,
     obstacles: modeConfig.hasObstacles ? [...customObstacles] : [],
     score: 0,
-    gameSpeed: modeConfig.initialSpeed ?? difficultyManager.getConfig().initialSpeed,
+    gameSpeed: modeConfig.initialSpeed ?? DIFFICULTY_PROFILES[difficultyProfile].initialSpeed,
     lastNarrowCell: null,
     eventId: 0,
     event: null,
-    difficultyProfile: difficultyManager.getProfile(),
+    difficultyProfile,
     mode,
     modeConfig,
     foodType: 'regular',
@@ -87,6 +88,10 @@ function nextRandom(seed: number) {
     seed = (1664525 * seed + 1013904223) >>> 0;
     return seed / 0x100000000;
   };
+}
+
+function getDifficultyConfig(state: GameEngineState) {
+  return DIFFICULTY_PROFILES[state.difficultyProfile ?? 'modern'];
 }
 
 function freeCells(
@@ -187,12 +192,13 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
       const random = nextRandom(action.randomSeed);
       const mode = action.mode ?? action.state?.mode ?? state.mode ?? 'maze';
       const customObs = action.customObstacles ?? action.state?.obstacles ?? [];
-      const baseState = action.state ?? createInitialGameState(mode, customObs);
+      const baseState = action.state ?? createInitialGameState(mode, customObs, state.difficultyProfile);
       const modeConfig = GAME_MODES[mode] || GAME_MODES.maze;
       const initialState = {
         ...baseState,
         mode,
         modeConfig,
+        difficultyProfile: baseState.difficultyProfile ?? state.difficultyProfile ?? 'modern',
         obstacles: modeConfig.hasObstacles ? [...customObs] : [],
       };
       initialState.food = freeCells(initialState.snake, initialState.obstacles, [], random) ?? initialState.food;
@@ -222,8 +228,9 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
     case 'CLEAR_BONUS':
       return state.bonusFood ? { ...state, bonusFood: null } : state;
     case 'SET_DIFFICULTY_PROFILE':
-      difficultyManager.setProfile(action.profile);
-      return { ...state, difficultyProfile: action.profile };
+      return state.difficultyProfile === action.profile
+        ? state
+        : { ...state, difficultyProfile: action.profile };
     case 'TICK': {
       const random = nextRandom(action.randomSeed);
 
@@ -330,10 +337,11 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
         const score = state.score + GameLogic.BONUS_POINTS;
 
         // Obstacles only spawn in modes with hasObstacles === true
-        const maxObs = difficultyManager.getMaxObstacles(score);
+        const difficulty = getDifficultyConfig(state);
+        const maxObs = difficulty.calculateMaxObstacles(score);
         const obstacles =
           state.modeConfig.hasObstacles &&
-          score >= difficultyManager.getObstacleThreshold() &&
+          score >= difficulty.obstacleStartScore &&
           state.obstacles.length < maxObs
             ? addObstacle(state.obstacles, snake, state.food, null, random)
             : state.obstacles;
@@ -366,9 +374,9 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
 
         // Adjust speed using mode speedIncrement + difficulty profile + food effect
         const speedInc = state.modeConfig.speedIncrement;
-        const minSpeed = difficultyManager.getMinSpeed();
+        const difficulty = getDifficultyConfig(state);
         const gameSpeed = Math.max(
-          minSpeed,
+          difficulty.minSpeed,
           state.gameSpeed - speedInc + effect.speedDelta
         );
 
@@ -383,32 +391,21 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
           }
         }
 
-        // Obstacles only spawn in modes with hasObstacles === true (FR-13-R)
-        const maxObs = difficultyManager.getMaxObstacles(score);
-        const obstacles =
-          state.modeConfig.hasObstacles &&
-          score >= difficultyManager.getObstacleThreshold() &&
-          state.obstacles.length < maxObs
-            ? addObstacle(state.obstacles, snake, state.food, state.bonusFood, random)
-            : state.obstacles;
-
-        // Bonus Food only in modes with hasBonusFood === true
-        const bonusInterval = difficultyManager.getBonusInterval();
+        // Bonus Food only in modes with hasBonusFood === true.
+        const bonusInterval = difficulty.bonusSpawnInterval;
         const bonusFood =
           state.modeConfig.hasBonusFood &&
           score > 0 &&
           score % bonusInterval === 0
-            ? freeCells(snake, obstacles, [state.food], random)
+            ? freeCells(snake, state.obstacles, [state.food], random)
             : state.bonusFood;
 
-        // Roll next food type (FR-14-R)
-        const isClassic = !state.modeConfig.hasObstacles;
-        const nextFoodType = difficultyManager.rollFoodType(random, isClassic, score);
-
-        const food = freeCells(snake, obstacles, [bonusFood], random);
-        if (!food) {
+        // Resolve the next target before obstacle placement; otherwise pathfinding
+        // can accidentally validate the cell the snake just ate.
+        const nextFood = freeCells(snake, state.obstacles, [bonusFood], random);
+        if (!nextFood) {
           return withEvent(
-            { ...movedState, snake, obstacles, bonusFood, score, gameSpeed, foodType: nextFoodType },
+            { ...movedState, snake, bonusFood, score, gameSpeed },
             {
               type: 'victory',
               score,
@@ -418,11 +415,29 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
               diedToOwnTail: false,
               foodType: state.foodType,
               sound: effect.sound,
-            }
+            },
+            state.gameSpeed
           );
         }
+
+        const maxObs = difficulty.calculateMaxObstacles(score);
+        const obstacles =
+          state.modeConfig.hasObstacles &&
+          score >= difficulty.obstacleStartScore &&
+          state.obstacles.length < maxObs
+            ? addObstacle(state.obstacles, snake, nextFood, bonusFood, random)
+            : state.obstacles;
+
+        // Classic mode intentionally keeps regular food; specialized food is maze-only.
+        const isClassic = !state.modeConfig.hasObstacles;
+        const foodRoll = !isClassic && score >= 15 ? random() : 1;
+        const nextFoodType: FoodType =
+          foodRoll < 0.08 ? 'golden' :
+          foodRoll < 0.16 ? 'ice' :
+          foodRoll < 0.24 ? 'poison' :
+          foodRoll < 0.32 ? 'mystery' : 'regular';
         return withEvent(
-          { ...movedState, snake, obstacles, bonusFood, food, score, gameSpeed, foodType: nextFoodType },
+          { ...movedState, snake, obstacles, bonusFood, food: nextFood, score, gameSpeed, foodType: nextFoodType },
           {
             type: 'regular-food',
             score,

@@ -1,13 +1,13 @@
 # Google Play Store Listing — English (en-US)
 
 ## App Title (max 30 characters)
-Snake Maze 2026
+Pixelfang: Snake Maze
 
 ## Short Description (max 80 characters)
 Retro Nokia-style snake game with dynamic mazes, bonus foods & time attack!
 
 ## Full Description (max 4000 characters)
-Relive the golden era of handheld mobile gaming with **Snake Maze 2026** — the definitive retro Nokia snake experience reinvented for modern touchscreens!
+Relive the golden era of handheld mobile gaming with **Pixelfang: Snake Maze** — the definitive retro Nokia snake experience reinvented for modern touchscreens!
 
 Featuring authentic green monochrome LCD aesthetics, dot-matrix scanline effects, tactile chiptune sound effects, and ergonomic retro physical-style controls.
 
@@ -42,7 +42,7 @@ Featuring authentic green monochrome LCD aesthetics, dot-matrix scanline effects
 
 ### 🏆 CAREER, STATS & ACHIEVEMENTS
 * **Ranks from Worm to Mythical Leviathan:** Rise through 7 distinct skill ranks.
-* **19 Challenging Achievements:** Wall Phobia, Narrow Passer, Ouroboros, Light Speed, and more!
+* **25 Challenging Achievements:** Wall Phobia, Narrow Passer, Ouroboros, Light Speed, and more!
 * **Daily Quests:** Fresh daily challenges to test your skills and earn trophies.
 * **Career Analytics:** Track your longest snake, total food eaten, session durations, and high scores per mode.
 
@@ -60,4 +60,4 @@ Featuring authentic green monochrome LCD aesthetics, dot-matrix scanline effects
 * No account registration or login needed.
 * Scores, settings, and custom mazes stay on your device; Android AdMob advertising may collect device identifiers, approximate location, ad interactions, and diagnostics as described in Google's privacy disclosures.
 
-Download **Snake Maze 2026** today and experience the timeless arcade classic!
+Download **Pixelfang: Snake Maze** today and experience the timeless arcade classic!

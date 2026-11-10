@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Point, Language } from '../types.ts';
 import { GameLogic } from '../constants/gameConstants.ts';
 import { mazeEditorService } from '../utils/mazeEditor.ts';
+import type { MazeDifficulty } from '../utils/mazeEditor.ts';
 import { isPathAvailable } from '../utils/pathfinding.ts';
 import { soundManager } from '../utils/soundManager.ts';
 import { ArrowLeft, Save, Trash2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -14,6 +15,8 @@ interface MazeEditorScreenProps {
 
 export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, onPlayMaze, lang }) => {
   const [mazeName, setMazeName] = useState(lang === 'tr' ? 'Özel Labirent' : 'Custom Maze');
+  const [mazeDescription, setMazeDescription] = useState('');
+  const [mazeDifficulty, setMazeDifficulty] = useState<MazeDifficulty>('easy');
   const [obstacles, setObstacles] = useState<Point[]>([]);
   const [statusMessage, setStatusMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -63,7 +66,10 @@ export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, onPl
 
   const handleSave = (playAfterSaving = false) => {
     soundManager.playButtonClick();
-    const res = mazeEditorService.saveMaze(mazeName, obstacles);
+    const res = mazeEditorService.saveMaze(mazeName, obstacles, {
+      description: mazeDescription,
+      difficulty: mazeDifficulty,
+    });
     if (res.success && res.maze) {
       soundManager.playBonusEat();
       if (playAfterSaving) {
@@ -112,22 +118,45 @@ export const MazeEditorScreen: React.FC<MazeEditorScreenProps> = ({ onBack, onPl
       </div>
 
       {/* Name Input */}
-      <div className="w-full my-2 flex items-center gap-2">
-        <input
-          type="text"
-          value={mazeName}
-          onChange={(e) => setMazeName(e.target.value)}
-          placeholder={lang === 'tr' ? 'Harita Adı...' : 'Map Name...'}
-          className="flex-1 py-1.5 px-3 rounded-lg border-2 border-[#3A3F44]/40 bg-white/60 font-mono-retro font-bold text-sm text-[#3A3F44] outline-hidden focus:border-[#3A3F44]"
+      <div className="w-full my-2 space-y-1.5">
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={mazeName}
+            maxLength={32}
+            onChange={(e) => setMazeName(e.target.value)}
+            placeholder={lang === 'tr' ? 'Harita Adı...' : 'Map Name...'}
+            className="flex-1 min-w-0 py-1.5 px-3 rounded-lg border-2 border-[#3A3F44]/40 bg-white/60 font-mono-retro font-bold text-sm text-[#3A3F44] outline-hidden focus:border-[#3A3F44]"
+          />
+          <button
+            type="button"
+            onClick={handleClear}
+            className="p-2 rounded-lg bg-red-600/10 text-red-700 hover:bg-red-600/20 transition cursor-pointer"
+            title={lang === 'tr' ? 'Temizle' : 'Clear'}
+          >
+            <Trash2 className="w-5 h-5" />
+          </button>
+        </div>
+        <textarea
+          value={mazeDescription}
+          maxLength={120}
+          onChange={(event) => setMazeDescription(event.target.value)}
+          placeholder={lang === 'tr' ? 'Kısa açıklama (isteğe bağlı)' : 'Short description (optional)'}
+          className="w-full resize-none py-1.5 px-3 rounded-lg border-2 border-[#3A3F44]/30 bg-white/60 font-mono-retro text-xs text-[#3A3F44] outline-hidden focus:border-[#3A3F44]"
+          rows={2}
         />
-        <button
-          type="button"
-          onClick={handleClear}
-          className="p-2 rounded-lg bg-red-600/10 text-red-700 hover:bg-red-600/20 transition cursor-pointer"
-          title={lang === 'tr' ? 'Temizle' : 'Clear'}
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
+        <label className="flex items-center gap-2 text-xs font-bold font-mono-retro">
+          <span>{lang === 'tr' ? 'Zorluk' : 'Difficulty'}</span>
+          <select
+            value={mazeDifficulty}
+            onChange={(event) => setMazeDifficulty(event.target.value as MazeDifficulty)}
+            className="flex-1 p-1.5 rounded-lg border border-[#3A3F44]/30 bg-white/70"
+          >
+            <option value="easy">{lang === 'tr' ? 'Kolay' : 'Easy'}</option>
+            <option value="medium">{lang === 'tr' ? 'Orta' : 'Medium'}</option>
+            <option value="hard">{lang === 'tr' ? 'Zor' : 'Hard'}</option>
+          </select>
+        </label>
       </div>
 
       {/* Grid Editor */}

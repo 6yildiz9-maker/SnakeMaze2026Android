@@ -1,13 +1,13 @@
 # Google Play Store Mağaza Bilgileri — Türkçe (tr-TR)
 
 ## Uygulama Adı (maksimum 30 karakter)
-Snake Maze 2026: Dolambaç
+Pixelfang: Snake Maze
 
 ## Kısa Açıklama (maksimum 80 karakter)
 Dinamik labirentler, bonus yemler ve nostaljik LCD ekranlı retro yılan oyunu!
 
 ## Tam Açıklama (maksimum 4000 karakter)
-Mobil oyun dünyasının efsanevi klasiği geri döndü! **Snake Maze 2026**, Nokia 3310 döneminin unutulmaz yeşil monokrom LCD ekran estetiğini, modern dinamik labirent mekanikleri ve gelişmiş kontrol seçenekleriyle bir araya getiriyor.
+Mobil oyun dünyasının efsanevi klasiği geri döndü! **Pixelfang: Snake Maze**, Nokia 3310 döneminin unutulmaz yeşil monokrom LCD ekran estetiğini, modern dinamik labirent mekanikleri ve gelişmiş kontrol seçenekleriyle bir araya getiriyor.
 
 Nostaljik piksel ızgarası, tarama çizgisi (scanline) efektleri, chiptune 8-bit ses efektleri ve titreşimli dokunmatik geri bildirim ile gerçek bir retro konsol deneyimi yaşayın!
 
@@ -43,7 +43,7 @@ Nostaljik piksel ızgarası, tarama çizgisi (scanline) efektleri, chiptune 8-bi
 
 ### 🏆 KARİYER, İSTATİSTİKLER VE BAŞARIMLAR
 * **Solucan'dan Mistik Leviathan'a 7 Rütbe:** Skorunuz yükseldikçe yeni unvanlar kazanın.
-* **19 Zorlu Başarım:** Duvar Fobisi, Dar Geçit Ustası, Işık Hızı, Ouroboros ve daha fazlası!
+* **25 Zorlu Başarım:** Duvar Fobisi, Dar Geçit Ustası, Işık Hızı, Ouroboros ve daha fazlası!
 * **Günlük Görevler:** Her gün yenilenen görevleri tamamlayarak kupa toplayın.
 * **Ayrıntılı Kariyer Analizi:** En uzun yılan, toplam yenen yem, oyun süreleri ve her mod için ayrı rekor tablosu.
 
@@ -61,4 +61,4 @@ Nostaljik piksel ızgarası, tarama çizgisi (scanline) efektleri, chiptune 8-bi
 * Üyelik veya giriş gerekmez.
 * Skorlarınız, ayarlarınız ve özel labirentler cihazınızda saklanır. Android sürümündeki AdMob reklamları Google'ın gizlilik bildiriminde belirtilen reklam kimliği, yaklaşık konum, reklam etkileşimi ve tanılama verilerini işleyebilir.
 
-**Snake Maze 2026**'yı hemen indirin ve zamansız yılan macerasını yeniden keşfedin!
+**Pixelfang: Snake Maze**'i hemen indirin ve zamansız yılan macerasını yeniden keşfedin!

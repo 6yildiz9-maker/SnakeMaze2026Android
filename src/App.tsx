@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useReducer } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useReducer, useMemo } from 'react';
 import {
   Direction,
   Point,
@@ -27,7 +27,7 @@ import { MazeEditorScreen } from './components/MazeEditorScreen.tsx';
 import { Toast, ToastMessage } from './components/Toast.tsx';
 import { soundManager } from './utils/soundManager.ts';
 import { achievementsManager, type AchievementItem } from './utils/achievementsManager.ts';
-import { difficultyManager } from './utils/difficultyManager.ts';
+import { DIFFICULTY_PROFILES } from './utils/difficultyManager.ts';
 import { particleSystem } from './utils/particles.ts';
 import { careerManager } from './utils/career.ts';
 import { questManager } from './utils/quests.ts';
@@ -38,6 +38,7 @@ import { createInitialGameState, gameReducer } from './utils/gameReducer.ts';
 import { createRandomSeed, currentTimeMs } from './utils/time.ts';
 import { InputController } from './utils/inputController.ts';
 import { mazeEditorService } from './utils/mazeEditor.ts';
+import { findArrivalDirection } from './utils/pathfinding.ts';
 import { isCapacitor } from './utils/platform.ts';
 import { adService } from './utils/ads.ts';
 import confetti from 'canvas-confetti';
@@ -58,7 +59,8 @@ export const App: React.FC = () => {
     return storage.getItem(STORAGE_KEYS.vibrationEnabled) !== 'false';
   });
   const [difficultyProfile, setDifficultyProfile] = useState<DifficultyProfile>(() => {
-    return difficultyManager.getProfile();
+    const saved = storage.getItem(STORAGE_KEYS.difficultyProfile);
+    return saved === 'retro' || saved === 'modern' ? saved : 'modern';
   });
   const [buttonSize, setButtonSize] = useState<ButtonSize>(() => {
     const saved = storage.getItem(STORAGE_KEYS.buttonSize);
@@ -158,8 +160,18 @@ export const App: React.FC = () => {
   const gridSize = GameLogic.DEFAULT_GRID_SIZE;
   const gridHeight = GameLogic.DEFAULT_GRID_HEIGHT;
 
-  const [gameState, dispatch] = useReducer(gameReducer, undefined, createInitialGameState);
-  const { snake, direction, food, bonusFood, obstacles, score, gameSpeed } = gameState;
+  const [gameState, dispatch] = useReducer(
+    gameReducer,
+    undefined,
+    () => createInitialGameState(selectedMode, [], difficultyProfile)
+  );
+  const { snake, direction, food, bonusFood, obstacles, score, gameSpeed, foodType } = gameState;
+  const foodApproachDirection = useMemo(
+    () => foodType === 'regular' || foodType === 'bonus'
+      ? null
+      : findArrivalDirection(snake[0], food, obstacles, gridSize, gridHeight, snake.slice(1)),
+    [foodType, snake, food, obstacles, gridSize, gridHeight]
+  );
 
   // Countdown
   const [countdown, setCountdown] = useState<number | null>(null);
@@ -251,7 +263,6 @@ export const App: React.FC = () => {
 
   const handleSelectDifficultyProfile = (profile: DifficultyProfile) => {
     setDifficultyProfile(profile);
-    difficultyManager.setProfile(profile);
     storage.setItem(STORAGE_KEYS.difficultyProfile, profile);
     dispatch({ type: 'SET_DIFFICULTY_PROFILE', profile });
   };
@@ -338,6 +349,8 @@ export const App: React.FC = () => {
     gameSpeed: savedGameSpeed = gameSpeed,
     mode: savedMode = selectedMode,
     timeRemainingMs: savedTimeRemaining = gameState.timeRemainingMs,
+    foodType: savedFoodType = gameState.foodType,
+    savedDifficultyProfile = difficultyProfile,
   }: {
     snake?: Point[];
     obstacles?: Point[];
@@ -348,6 +361,8 @@ export const App: React.FC = () => {
     gameSpeed?: number;
     mode?: GameMode;
     timeRemainingMs?: number;
+    foodType?: FoodType;
+    savedDifficultyProfile?: DifficultyProfile;
   } = {}) => {
     storage.setItem(
       STORAGE_KEYS.savedSnake,
@@ -363,12 +378,14 @@ export const App: React.FC = () => {
     storage.setItem(STORAGE_KEYS.savedScore, String(savedScore));
     storage.setItem(STORAGE_KEYS.savedGameSpeed, String(savedGameSpeed));
     storage.setItem(STORAGE_KEYS.savedMode, savedMode);
+    storage.setItem(STORAGE_KEYS.savedFoodType, savedFoodType);
+    storage.setItem(STORAGE_KEYS.savedDifficultyProfile, savedDifficultyProfile);
     if (savedTimeRemaining !== undefined) {
       storage.setItem(STORAGE_KEYS.savedTimeRemaining, String(savedTimeRemaining));
     } else {
       storage.removeItem(STORAGE_KEYS.savedTimeRemaining);
     }
-    storage.setItem(STORAGE_KEYS.savedVersion, '1');
+    storage.setItem(STORAGE_KEYS.savedVersion, '2');
     storage.setItem(STORAGE_KEYS.savedGameRunning, 'true');
 
     if (savedBonusFood) {
@@ -380,7 +397,10 @@ export const App: React.FC = () => {
       storage.removeItem(STORAGE_KEYS.savedBonusFoodY);
       storage.removeItem(STORAGE_KEYS.savedBonusFoodRemaining);
     }
-  }, [snake, obstacles, direction, food, bonusFood, score, gameSpeed, selectedMode, gameState.timeRemainingMs]);
+  }, [
+    snake, obstacles, direction, food, bonusFood, score, gameSpeed, selectedMode,
+    gameState.timeRemainingMs, gameState.foodType, difficultyProfile,
+  ]);
 
   // Restore saved game
   const restoreGameState = (): boolean => {
@@ -388,7 +408,7 @@ export const App: React.FC = () => {
       const isRunning = storage.getItem(STORAGE_KEYS.savedGameRunning);
       if (isRunning !== 'true') return false;
       const savedVersion = storage.getItem(STORAGE_KEYS.savedVersion);
-      if (savedVersion !== null && savedVersion !== '1') {
+      if (savedVersion !== null && savedVersion !== '1' && savedVersion !== '2') {
         clearSavedGame();
         return false;
       }
@@ -483,16 +503,38 @@ export const App: React.FC = () => {
       const validMode: GameMode = ['classic', 'maze', 'time_attack', 'survival'].includes(rawMode)
         ? rawMode
         : 'maze';
+      const rawDifficulty = storage.getItem(STORAGE_KEYS.savedDifficultyProfile);
+      const restoredDifficulty: DifficultyProfile =
+        rawDifficulty === 'retro' || rawDifficulty === 'modern' ? rawDifficulty : difficultyProfile;
+      const restoredInitialState = createInitialGameState(validMode, restoredObs, restoredDifficulty);
+      const rawFoodType = storage.getItem(STORAGE_KEYS.savedFoodType);
+      const restoredFoodType: FoodType =
+        rawFoodType === 'bonus' || rawFoodType === 'golden' || rawFoodType === 'ice' ||
+        rawFoodType === 'poison' || rawFoodType === 'mystery'
+          ? rawFoodType
+          : 'regular';
       setSelectedMode(validMode);
       setHighScore(getModeHighScore(validMode));
+      setDifficultyProfile(restoredDifficulty);
 
       const rawTimeRemaining = storage.getItem(STORAGE_KEYS.savedTimeRemaining);
-      const restoredTime = rawTimeRemaining ? Number(rawTimeRemaining) : undefined;
+      const restoredTime = restoredInitialState.timeRemainingMs === undefined
+        ? undefined
+        : rawTimeRemaining === null
+          ? restoredInitialState.timeRemainingMs
+          : Number(rawTimeRemaining);
+      if (
+        restoredTime !== undefined &&
+        (!Number.isFinite(restoredTime) || restoredTime < 0)
+      ) {
+        clearSavedGame();
+        return false;
+      }
 
       dispatch({
         type: 'RESTORE',
         state: {
-          ...createInitialGameState(validMode, restoredObs),
+          ...restoredInitialState,
           snake: restoredSnake,
           obstacles: restoredObs,
           direction: savedDir,
@@ -501,7 +543,10 @@ export const App: React.FC = () => {
           score: savedScore,
           gameSpeed: savedSpeed,
           mode: validMode,
-          timeRemainingMs: restoredTime,
+          timeRemainingMs: restoredTime === undefined
+            ? undefined
+            : Math.min(restoredTime, restoredInitialState.timeRemainingMs ?? restoredTime),
+          foodType: restoredFoodType,
         },
       });
 
@@ -558,7 +603,7 @@ export const App: React.FC = () => {
     dispatch({
       type: 'RESET',
       state: {
-        ...createInitialGameState(requestedMode, customObstacles),
+        ...createInitialGameState(requestedMode, customObstacles, difficultyProfile),
         snake: initialSnake,
         food: [midX, midY - 4],
       },
@@ -709,7 +754,7 @@ export const App: React.FC = () => {
     achievementsManager.checkAchievements(fullGameData, handleAchievementUnlocked);
 
     // Record in CareerManager with extended analytics (FR-17-R)
-    const level = difficultyManager.getLevel(finalScore);
+    const level = DIFFICULTY_PROFILES[difficultyProfile].getLevel(finalScore);
     const activeTheme = storage.getItem(STORAGE_KEYS.customMapColor) ? 'Custom' : 'Nokia 3310 (Original)';
     careerManager.recordSession(
       gameOverData,
@@ -739,6 +784,7 @@ export const App: React.FC = () => {
     totalFood,
     totalPlayTime,
     selectedMode,
+    difficultyProfile,
     enqueueToast,
     lang,
   ]);
@@ -1229,12 +1275,13 @@ export const App: React.FC = () => {
           bonusRemainingMs={bonusRemainingMs}
           timeRemainingMs={gameState.timeRemainingMs}
           foodType={gameState.foodType}
+          foodApproachDirection={foodApproachDirection}
           direction={direction}
           colors={colors}
           score={score}
           foodEffect={foodEffect}
           foodEffectDirection={foodEffectDirection}
-          level={difficultyManager.getLevel(score)}
+          level={DIFFICULTY_PROFILES[difficultyProfile].getLevel(score)}
           countdown={countdown}
           gameSpeed={gameSpeed}
           lcdEffectsEnabled={lcdEffectsEnabled}

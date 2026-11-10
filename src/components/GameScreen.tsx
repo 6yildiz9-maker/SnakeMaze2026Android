@@ -20,6 +20,7 @@ interface GameScreenProps {
   bonusRemainingMs?: number;
   timeRemainingMs?: number;
   foodType?: FoodType;
+  foodApproachDirection?: Direction | null;
   direction: Direction;
   colors: ThemeColors;
   score: number;
@@ -57,6 +58,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   bonusRemainingMs = 0,
   timeRemainingMs,
   foodType = 'regular',
+  foodApproachDirection = null,
   direction,
   colors,
   score,
@@ -88,7 +90,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   return (
     <div
       className="w-full h-full flex flex-col items-center justify-between p-2 sm:p-4 max-w-md mx-auto console-case"
-      style={{ touchAction: controlMode === 'swipe' ? 'none' : 'auto' }}
+      style={{
+        touchAction: controlMode === 'swipe' ? 'none' : 'auto',
+        paddingTop: 'max(env(safe-area-inset-top), 0.5rem)',
+      }}
       onTouchStart={controlMode === 'swipe' ? onSwipeStart : undefined}
       onTouchMove={controlMode === 'swipe' ? onSwipeMove : undefined}
       onTouchEnd={controlMode === 'swipe' ? onSwipeEnd : undefined}
@@ -106,6 +111,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
         {/* Center: Score & Level & Optional Time Remaining */}
         <div className="flex flex-col items-center">
+          <span className="text-[8px] font-black font-mono-retro tracking-[0.2em] text-[#3A3F44]/55 leading-none">
+            PIXELFANG
+          </span>
           <div className="text-2xl sm:text-3xl font-black font-mono-retro tracking-wider text-[#1E2328] leading-none">
             {t(lang, 'score', { score })}
           </div>
@@ -127,6 +135,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             )}
           </div>
           <div className="h-4">
+            {foodType !== 'regular' && foodType !== 'bonus' && foodApproachDirection && (
+              <span className="inline-block px-1.5 rounded bg-[#3A3F44]/15 text-[#1E2328] text-[10px] font-bold font-mono-retro">
+                {t(lang, 'food_approach_hint', {
+                  direction: ({ UP: '↑', DOWN: '↓', LEFT: '←', RIGHT: '→' })[foodApproachDirection],
+                })}
+              </span>
+            )}
             {foodEffect && foodEffect !== 'regular' && (
               <span className="inline-block px-1.5 rounded bg-[#3A3F44] text-[#C7F0D8] text-[10px] font-bold font-mono-retro animate-pulse">
                 {t(lang, `food_${foodEffect}_effect`)}
