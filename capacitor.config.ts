@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.aiwhishpers.snakemaze2026',
-  appName: 'Snake Maze 2026',
+  appName: 'Pixelfang: Snake Maze',
   webDir: 'dist',
   server: {
     androidScheme: 'https',

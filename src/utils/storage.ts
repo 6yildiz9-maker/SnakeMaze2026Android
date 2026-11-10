@@ -30,6 +30,8 @@ export const STORAGE_KEYS = {
   savedBonusFoodRemaining: 'saved_bonus_food_remaining',
   savedGameRunning: 'saved_is_game_running',
   savedMode: 'saved_mode',
+  savedFoodType: 'saved_food_type',
+  savedDifficultyProfile: 'saved_difficulty_profile',
   savedTimeRemaining: 'saved_time_remaining_ms',
   vibrationEnabled: 'vibration_enabled',
   buttonSize: 'button_size',

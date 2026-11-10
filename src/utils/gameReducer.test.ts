@@ -1,8 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { GameLogic } from '../constants/gameConstants.ts';
 import { createInitialGameState, gameReducer } from './gameReducer.ts';
+import { difficultyManager } from './difficultyManager.ts';
+import { isPathAvailable } from './pathfinding.ts';
 
 describe('gameReducer', () => {
+  it('updates difficulty in state without mutating the shared difficulty manager', () => {
+    const state = createInitialGameState('maze', [], 'modern');
+    const managerProfile = difficultyManager.getProfile();
+
+    const next = gameReducer(state, { type: 'SET_DIFFICULTY_PROFILE', profile: 'retro' });
+
+    expect(next.difficultyProfile).toBe('retro');
+    expect(difficultyManager.getProfile()).toBe(managerProfile);
+  });
+
   it('wraps at the board edge without changing the configured direction', () => {
     const state = {
       ...createInitialGameState(),
@@ -200,6 +212,24 @@ describe('gameReducer', () => {
       }
     });
 
+    it.each(['classic', 'time_attack'] as const)(
+      '%s mode keeps specialized food disabled after the score threshold',
+      (mode) => {
+        const state = {
+          ...createInitialGameState(mode),
+          snake: [[5, 5], [5, 6], [5, 7]] as [number, number][],
+          direction: 'UP' as const,
+          food: [5, 4] as [number, number],
+          score: 14,
+        };
+
+        const next = gameReducer(state, { type: 'TICK', randomSeed: 100 });
+
+        expect(next.score).toBe(15);
+        expect(next.foodType).toBe('regular');
+      }
+    );
+
     it('time_attack mode triggers time_up preserving score when time expires', () => {
       const state = {
         ...createInitialGameState('time_attack'),
@@ -225,6 +255,20 @@ describe('gameReducer', () => {
       const restored = gameReducer(ticked, { type: 'RESTORE', state: ticked });
       expect(restored.timeRemainingMs).toBe(49700);
       expect(restored.mode).toBe('time_attack');
+    });
+
+    it('restores the saved food type and difficulty profile with the game state', () => {
+      const state = {
+        ...createInitialGameState('maze', [], 'retro'),
+        foodType: 'ice' as const,
+        timeRemainingMs: 12000,
+      };
+
+      const restored = gameReducer(createInitialGameState(), { type: 'RESTORE', state });
+
+      expect(restored.foodType).toBe('ice');
+      expect(restored.difficultyProfile).toBe('retro');
+      expect(restored.timeRemainingMs).toBe(12000);
     });
 
     it('survival mode uses higher speed increment (4)', () => {
@@ -315,6 +359,28 @@ describe('gameReducer', () => {
       const firstMove = gameReducer(next, { type: 'TICK', randomSeed: 18 });
       expect(firstMove.event?.type).not.toBe('collision');
       expect(firstMove.snake[0]).toEqual([10, 9]);
+    });
+
+    it('keeps the newly spawned food reachable when dynamic obstacles are added', () => {
+      const state = {
+        ...createInitialGameState('maze'),
+        snake: [[10, 10], [10, 11], [10, 12]] as [number, number][],
+        direction: 'UP' as const,
+        food: [10, 9] as [number, number],
+        score: 39,
+      };
+
+      const next = gameReducer(state, { type: 'TICK', randomSeed: 4321 });
+
+      expect(next.event?.type).toBe('regular-food');
+      expect(isPathAvailable(
+        next.snake[0],
+        next.food,
+        next.obstacles,
+        GameLogic.DEFAULT_GRID_SIZE,
+        GameLogic.DEFAULT_GRID_HEIGHT,
+        next.snake.slice(1)
+      )).toBe(true);
     });
   });
 });

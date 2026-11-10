@@ -1,6 +1,6 @@
-# Snake Maze 2026
+# Pixelfang: Snake Maze
 
-A retro Nokia-style snake game featuring maze obstacles, bonus foods, dynamic career ranks, 19 unlockable achievements, customizable themes, and multiple game modes.
+A retro Nokia-style snake game featuring maze obstacles, bonus foods, dynamic career ranks, 25 unlockable achievements, customizable themes, and multiple game modes.
 
 ## Platform Matrix
 
@@ -19,9 +19,9 @@ Never commit `.env` files or credentials. If a real secret is accidentally commi
 ## Game Modes & Balance Profiles
 
 - **Game Modes**:
-  - **Maze (Labirent)**: Dynamic 2x2 obstacles spawn as you level up, verified by BFS pathfinding. Supports custom user mazes.
-  - **Classic (Klasik)**: Authentic obstacle-free retro snake experience with wrapping borders.
-  - **Time Attack (Zamana Karşı)**: 60-second timer rush with HUD countdown timer.
+  - **Maze (Labirent)**: Dynamic 2x2 obstacles spawn after the configured score threshold, with reachability checked against the next food cell. Supports custom user mazes.
+  - **Classic (Klasik)**: Obstacle-free retro snake with wrapping borders; specialized food is disabled.
+  - **Time Attack (Zamana Karşı)**: 60-second timer rush with HUD countdown; specialized food is disabled.
   - **Survival (Hayatta Kalma)**: High initial speed (220ms) and aggressive acceleration (+4 speed increment).
 - **Balance Profiles (DifficultyManager)**:
   - **Modern (Balanced)**: Obstacles start at 40 points so early play is smooth.
@@ -38,6 +38,7 @@ Never commit `.env` files or credentials. If a real secret is accidentally commi
   - Timed Bonus Food with 5-second lifespan and rotating guide sparklers.
   - 3-second countdown on new game and resume; the first direction input skips it without turning.
   - State autosave and resume functionality across tab closures (beforeunload/pagehide).
+  - Saved games retain food type, mode, balance profile, speed, and remaining time.
 - **Multiple Control Modes**:
   - **Classic (Zik-zak)**: Authentic 2-button relative turning (Left/Down and Right/Up).
   - **D-Pad**: 4-way direct directional buttons.
@@ -78,18 +79,17 @@ npm run build
 
 ### Android test builds
 
-The Android project is generated locally by Capacitor and is intentionally ignored by Git:
+The Android Gradle project and native source are tracked in Git. Generated web assets, local SDK configuration, build outputs, and signing files remain ignored:
 
 ```bash
-npx cap add android
+npm ci
+npm run build
 npx cap sync android
 node scripts/configure-android-admob.mjs
 node scripts/configure-android-immersive.mjs
-cd android
-.\gradlew.bat assembleDebug
 ```
 
-Build with JDK 21. The configuration script places this app's AdMob application ID in the generated Android manifest. The debug APK uses Google's demo ad units; never test with production ad-unit IDs.
+Build with JDK 21 from the `android` directory (`.\gradlew.bat assembleDebug` on Windows or `./gradlew assembleDebug` on macOS/Linux). Capacitor sync regenerates web/plugin assets; the checked-in native source retains the app identity and branding. The debug APK uses Google's demo ad units; never test with production ad-unit IDs.
 
 ### Signed Play release builds
 

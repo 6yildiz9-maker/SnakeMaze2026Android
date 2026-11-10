@@ -31,10 +31,10 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap().catch((error: unknown) => {
-  console.error('Unable to start Snake Maze:', error);
+  console.error('Unable to start Pixelfang: Snake Maze:', error);
   root.render(
     <main role="alert" className="app-shell flex items-center justify-center bg-[#C7F0D8] p-6 text-center font-mono-retro text-[#3A3F44]">
-      <p>Snake Maze could not load its saved settings. Restart the app and try again.</p>
+      <p>Pixelfang could not load its saved settings. Restart the app and try again.</p>
     </main>
   );
 });

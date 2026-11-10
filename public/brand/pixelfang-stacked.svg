@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 340">
+  <g transform="translate(136 16)">
+    <rect width="128" height="128" rx="26" fill="#1E2328"/>
+    <path fill="#79FF4A" d="M41 18h46v7h7v7h7v39h-7v12h-7v7H41v-7h-7V71h-7V32h7v-7h7z"/>
+    <path fill="#1E2328" d="M43 43h12v12H43zM73 43h12v12H73z"/>
+    <path fill="#FFD65A" d="M46 69h13v12l-6.5 9L46 81zM69 69h13v12l-6.5 9L69 81z"/>
+    <path fill="#1E2328" d="M59 67h10v6H59z"/>
+  </g>
+  <text x="200" y="225" text-anchor="middle" fill="#1E2328" font-family="monospace" font-size="42" font-weight="900" letter-spacing="4">PIXELFANG</text>
+  <text x="200" y="267" text-anchor="middle" fill="#3A3F44" font-family="monospace" font-size="22" font-weight="700" letter-spacing="10">SNAKE MAZE</text>
+</svg>

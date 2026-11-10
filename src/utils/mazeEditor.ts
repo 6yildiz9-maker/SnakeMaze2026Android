@@ -6,14 +6,22 @@ import { GameLogic } from '../constants/gameConstants.ts';
 export interface CustomMaze {
   id: string;
   name: string;
+  description: string;
+  difficulty: MazeDifficulty;
   obstacles: Point[];
   createdAt: number;
 }
+
+export type MazeDifficulty = 'easy' | 'medium' | 'hard';
 
 function isPoint(value: unknown): value is Point {
   return Array.isArray(value) &&
     value.length === 2 &&
     value.every((coordinate) => Number.isInteger(coordinate));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
 }
 
 export class MazeEditorService {
@@ -51,12 +59,59 @@ export class MazeEditorService {
   }
 
   public getCustomMazes(): CustomMaze[] {
-    return storage.getJson<CustomMaze[]>(STORAGE_KEYS.customMazes, []);
+    const stored = storage.getJson<unknown>(STORAGE_KEYS.customMazes, []);
+    if (!Array.isArray(stored)) return [];
+
+    return stored.flatMap((value): CustomMaze[] => {
+      if (
+        !isRecord(value) ||
+        typeof value.id !== 'string' ||
+        typeof value.name !== 'string' ||
+        typeof value.createdAt !== 'number' ||
+        !Number.isFinite(value.createdAt) ||
+        !Array.isArray(value.obstacles) ||
+        !value.obstacles.every(isPoint)
+      ) {
+        return [];
+      }
+
+      const obstacles = value.obstacles;
+      if (this.validateObstacles(obstacles)) return [];
+
+      return [{
+        id: value.id,
+        name: value.name,
+        description: typeof value.description === 'string' ? value.description : '',
+        difficulty: value.difficulty === 'medium' || value.difficulty === 'hard'
+          ? value.difficulty
+          : 'easy',
+        obstacles: obstacles.map(([x, y]) => [x, y]),
+        createdAt: value.createdAt,
+      }];
+    });
   }
 
-  public saveMaze(name: string, obstacles: Point[]): { success: boolean; error?: string; maze?: CustomMaze } {
+  public saveMaze(
+    name: string,
+    obstacles: Point[],
+    options: { description?: string; difficulty?: MazeDifficulty } = {}
+  ): { success: boolean; error?: string; maze?: CustomMaze } {
     if (!name.trim()) {
       return { success: false, error: 'Name cannot be empty' };
+    }
+    if (name.trim().length > 32) {
+      return { success: false, error: 'Name must be 32 characters or fewer.' };
+    }
+    if ((options.description?.length ?? 0) > 120) {
+      return { success: false, error: 'Description must be 120 characters or fewer.' };
+    }
+    if (
+      options.difficulty !== undefined &&
+      options.difficulty !== 'easy' &&
+      options.difficulty !== 'medium' &&
+      options.difficulty !== 'hard'
+    ) {
+      return { success: false, error: 'Map difficulty is invalid.' };
     }
     if (!Array.isArray(obstacles)) {
       return { success: false, error: 'Map obstacle data is invalid.' };
@@ -90,6 +145,8 @@ export class MazeEditorService {
     const newMaze: CustomMaze = {
       id: `maze_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: name.trim(),
+      description: options.description?.trim() ?? '',
+      difficulty: options.difficulty ?? 'easy',
       obstacles: obstacles.map(([x, y]) => [x, y]),
       createdAt: Date.now(),
     };
@@ -106,8 +163,10 @@ export class MazeEditorService {
 
   public exportToBase64(maze: CustomMaze): string {
     const json = JSON.stringify({
-      v: 1,
+      v: 2,
       n: maze.name,
+      d: maze.difficulty,
+      x: maze.description,
       o: maze.obstacles,
     });
     const bytes = new TextEncoder().encode(json);
@@ -120,17 +179,22 @@ export class MazeEditorService {
       const bytes = Uint8Array.from(decoded, (char) => char.charCodeAt(0));
       const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
       if (
-        typeof parsed !== 'object' ||
-        parsed === null ||
+        !isRecord(parsed) ||
         !('n' in parsed) ||
         typeof parsed.n !== 'string' ||
         !('o' in parsed) ||
         !Array.isArray(parsed.o) ||
-        !parsed.o.every(isPoint)
+        !parsed.o.every(isPoint) ||
+        ('v' in parsed && parsed.v !== 1 && parsed.v !== 2) ||
+        ('d' in parsed && parsed.d !== 'easy' && parsed.d !== 'medium' && parsed.d !== 'hard') ||
+        ('x' in parsed && typeof parsed.x !== 'string')
       ) {
         return { success: false, error: 'Invalid map code structure' };
       }
-      return this.saveMaze(parsed.n, parsed.o);
+      return this.saveMaze(parsed.n, parsed.o, {
+        description: typeof parsed.x === 'string' ? parsed.x : '',
+        difficulty: parsed.d === 'medium' || parsed.d === 'hard' ? parsed.d : 'easy',
+      });
     } catch {
       return { success: false, error: 'Corrupt or invalid map code' };
     }

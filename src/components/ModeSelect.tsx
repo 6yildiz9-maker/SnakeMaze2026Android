@@ -23,6 +23,7 @@ export const ModeSelect: React.FC<ModeSelectProps> = ({
 }) => {
   const modes: GameMode[] = ['maze', 'classic', 'time_attack', 'survival'];
   const customMazes = mazeEditorService.getCustomMazes();
+  const selectedMaze = customMazes.find((maze) => maze.id === selectedCustomMazeId);
 
   const getIcon = (mode: GameMode) => {
     switch (mode) {
@@ -88,10 +89,15 @@ export const ModeSelect: React.FC<ModeSelectProps> = ({
             </option>
             {customMazes.map((m) => (
               <option key={m.id} value={m.id}>
-                {m.name} ({m.obstacles.length} {lang === 'tr' ? 'engel' : 'blocks'})
+                {m.name} · {t(lang, `maze_difficulty_${m.difficulty}`)} ({m.obstacles.length} {lang === 'tr' ? 'engel' : 'blocks'})
               </option>
             ))}
           </select>
+          {selectedMaze?.description && (
+            <p className="px-1 pt-1 text-[10px] leading-tight text-[#3A3F44]/75 font-mono-retro">
+              {selectedMaze.description}
+            </p>
+          )}
         </div>
       )}
     </div>

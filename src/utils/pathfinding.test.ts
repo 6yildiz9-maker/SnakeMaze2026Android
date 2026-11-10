@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isPathAvailable } from './pathfinding.ts';
+import { findArrivalDirection, isPathAvailable } from './pathfinding.ts';
 import { Point } from '../types.ts';
 
 describe('isPathAvailable (BFS)', () => {
@@ -8,6 +8,20 @@ describe('isPathAvailable (BFS)', () => {
     const food: Point = [5, 10];
     const obstacles: Point[] = [];
     expect(isPathAvailable(head, food, obstacles)).toBe(true);
+  });
+
+  describe('findArrivalDirection (BFS)', () => {
+    it('returns the final movement direction needed to enter food across a wrapping edge', () => {
+      expect(findArrivalDirection([0, 5], [19, 5], [], 20, 20)).toBe('LEFT');
+    });
+
+    it('finds the approach direction after routing around an obstacle', () => {
+      expect(findArrivalDirection([1, 3], [3, 3], [[2, 3]], 7, 7)).toBe('DOWN');
+    });
+
+    it('returns null when the food cannot be reached', () => {
+      expect(findArrivalDirection([0, 0], [2, 0], [[1, 0], [0, 1], [4, 0], [0, 4]], 5, 5)).toBeNull();
+    });
   });
 
   it('navigates around obstacles using wrapping borders', () => {

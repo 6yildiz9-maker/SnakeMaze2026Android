@@ -1,4 +1,4 @@
-# Google Play Data Safety Declaration — Snake Maze 2026
+# Google Play Data Safety Declaration — Pixelfang: Snake Maze
 
 ## Working declaration — verify in Play Console before publishing
 

@@ -6,6 +6,7 @@ import { soundManager } from '../utils/soundManager.ts';
 import { ModeSelect } from './ModeSelect.tsx';
 import { isCapacitor } from '../utils/platform.ts';
 import { adService } from '../utils/ads.ts';
+import { BrandLockup } from './BrandLockup.tsx';
 
 interface MenuScreenProps {
   lang: Language;
@@ -70,8 +71,8 @@ export const MenuScreen: React.FC<MenuScreenProps> = ({
       </div>
 
       <div className="text-center my-auto py-2">
-        <h1 className="text-3xl sm:text-5xl font-black tracking-widest text-[#3A3F44] font-mono-retro uppercase drop-shadow-xs">
-          {t(lang, 'title_name')}
+        <h1 className="flex justify-center">
+          <BrandLockup />
         </h1>
         <div className="mt-2 text-base sm:text-xl font-bold font-mono-retro tracking-wider text-[#1E2328]">
           {t(lang, 'high_score', { score: highScore })}

@@ -1,8 +1,8 @@
-# Privacy Policy — Snake Maze 2026
+# Privacy Policy — Pixelfang: Snake Maze
 
 **Effective Date:** November 9, 2026
 
-Snake Maze 2026 ("we", "our", or "app") is a retro snake game designed for casual fun. We value your privacy and are committed to protecting it.
+Pixelfang: Snake Maze ("we", "our", or "app") is a retro snake game designed for casual fun. We value your privacy and are committed to protecting it.
 
 ## 1. Information and Services
 - **Local Game Data:** High scores, career statistics, achievement unlocks, sound/theme settings, and custom mazes are stored on your device (`localStorage` in the web version and Android Preferences in the Play version). The game developer does not upload this game data to a server.

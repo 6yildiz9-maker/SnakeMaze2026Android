@@ -49,7 +49,6 @@ jobs:
 
       - name: Add and sync Capacitor Android
         run: |
-          npx cap add android
           npx cap sync android
           node scripts/configure-android-admob.mjs
           node scripts/configure-android-immersive.mjs
@@ -63,7 +62,7 @@ jobs:
       - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: snake-maze-2026-debug-apk
+          name: pixelfang-snake-maze-debug-apk
           path: android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
@@ -123,6 +122,6 @@ jobs:
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.buildPlayRelease }}
         uses: actions/upload-artifact@v4
         with:
-          name: snake-maze-2026-play-aab
+          name: pixelfang-snake-maze-play-aab
           path: android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
