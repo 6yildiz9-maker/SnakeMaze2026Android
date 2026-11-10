@@ -212,6 +212,7 @@ export function gameReducer(state: GameEngineState, action: GameAction): GameEng
       const lastDirection = state.directionQueue[state.directionQueue.length - 1] ?? state.direction;
       if (
         state.directionQueue.length >= 3 ||
+        lastDirection === action.direction ||
         !isValidDirectionChange(lastDirection, action.direction)
       ) {
         return state;

@@ -437,6 +437,21 @@ export const SnakeCanvas: React.FC<SnakeCanvasProps> = ({
             ctx.fillRect(sx * cellSize + 4, sy * cellSize + 3, 2, 3);
             ctx.fillRect(sx * cellSize + cellSize / 2 - 1, sy * cellSize + 2, 2, 3);
             ctx.fillRect(sx * cellSize + cellSize - 6, sy * cellSize + 3, 2, 3);
+          } else if (rankDecorationsEnabled && rankDecoration === 'rank_star_serpent') {
+            ctx.fillStyle = '#F9D423';
+            ctx.fillRect(sx * cellSize + cellSize / 2 - 2, sy * cellSize + 1, 4, cellSize - 2);
+            ctx.fillRect(sx * cellSize + 2, sy * cellSize + cellSize / 2 - 2, cellSize - 4, 4);
+          } else if (rankDecorationsEnabled && rankDecoration === 'rank_cosmic_coil') {
+            ctx.fillStyle = '#9B5DE5';
+            ctx.fillRect(sx * cellSize + 3, sy * cellSize + 3, cellSize - 6, 3);
+            ctx.fillStyle = '#00F5D4';
+            ctx.fillRect(sx * cellSize + 5, sy * cellSize + cellSize - 6, cellSize - 10, 3);
+          } else if (rankDecorationsEnabled && rankDecoration === 'rank_infinity_serpent') {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(sx * cellSize + 3, sy * cellSize + 3, 3, 3);
+            ctx.fillRect(sx * cellSize + cellSize - 6, sy * cellSize + cellSize - 6, 3, 3);
+            ctx.fillStyle = '#FF6B35';
+            ctx.fillRect(sx * cellSize + cellSize / 2 - 2, sy * cellSize + 2, 4, 4);
           }
         }
       });

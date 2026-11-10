@@ -1,3 +1,5 @@
+import { isCapacitor } from './platform.ts';
+
 export const STORAGE_KEYS = {
   language: 'My_Lang',
   soundEnabled: 'sound_on',
@@ -63,20 +65,114 @@ export function setModeHighScore(mode: string, score: number): void {
 }
 
 const inMemoryStore = new Map<string, string>();
+const nativeValues = new Map<string, string>();
+type KeyValueStore = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-function getStorage(): { getItem: (key: string) => string | null; setItem: (key: string, value: string) => void; removeItem: (key: string) => void } {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    try {
-      return window.localStorage;
-    } catch {
-      // fallback to in-memory store
-    }
+let nativePreferences: typeof import('@capacitor/preferences').Preferences | null = null;
+let nativeStorageInitialized = false;
+let persistenceQueue = Promise.resolve();
+const persistenceErrors: unknown[] = [];
+
+function getBrowserStorage(): KeyValueStore | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
   }
+}
+
+function queueNativeWrite(write: () => Promise<void>): void {
+  persistenceQueue = persistenceQueue.then(write).catch((error: unknown) => {
+    persistenceErrors.push(error);
+    console.error('Unable to persist native preferences:', error);
+  });
+}
+
+function getStorage(): KeyValueStore {
+  if (isCapacitor()) {
+    if (!nativeStorageInitialized || !nativePreferences) {
+      throw new Error('Native preferences are not initialized.');
+    }
+    return {
+      getItem: (key) => nativeValues.get(key) ?? null,
+      setItem: (key, value) => {
+        nativeValues.set(key, value);
+        queueNativeWrite(() => nativePreferences!.set({ key, value }));
+      },
+      removeItem: (key) => {
+        nativeValues.delete(key);
+        queueNativeWrite(() => nativePreferences!.remove({ key }));
+      },
+    };
+  }
+
+  const browserStorage = getBrowserStorage();
+  if (browserStorage) return browserStorage;
   return {
     getItem: (key: string) => inMemoryStore.get(key) ?? null,
     setItem: (key: string, value: string) => inMemoryStore.set(key, String(value)),
     removeItem: (key: string) => inMemoryStore.delete(key),
   };
+}
+
+export async function initializeStorage(): Promise<void> {
+  if (!isCapacitor()) {
+    nativeStorageInitialized = true;
+    return;
+  }
+
+  const { Preferences } = await import('@capacitor/preferences');
+  nativePreferences = Preferences;
+  const browserStorage = getBrowserStorage();
+  const legacyValues = new Map<string, string>();
+  if (browserStorage && typeof window !== 'undefined') {
+    try {
+      for (let index = 0; index < window.localStorage.length; index += 1) {
+        const key = window.localStorage.key(index);
+        if (key === null) continue;
+        const value = window.localStorage.getItem(key);
+        if (value !== null) legacyValues.set(key, value);
+      }
+    } catch (error) {
+      console.warn('Unable to read legacy WebView storage for migration:', error);
+    }
+  }
+
+  const { keys: storedKeys } = await Preferences.keys();
+  const existingKeys = new Set(storedKeys);
+  for (const [key, value] of legacyValues) {
+    if (!existingKeys.has(key)) {
+      await Preferences.set({ key, value });
+      existingKeys.add(key);
+    }
+  }
+
+  const storedValues = await Promise.all(
+    [...existingKeys].map(async (key) => {
+      const { value } = await Preferences.get({ key });
+      return [key, value] as const;
+    })
+  );
+  nativeValues.clear();
+  for (const [key, value] of storedValues) {
+    if (value !== null) nativeValues.set(key, value);
+  }
+
+  if (browserStorage) {
+    for (const key of legacyValues.keys()) browserStorage.removeItem(key);
+  }
+  nativeStorageInitialized = true;
+}
+
+export async function flushStorage(): Promise<void> {
+  await persistenceQueue;
+  if (persistenceErrors.length > 0) {
+    persistenceErrors.splice(0, persistenceErrors.length);
+    const error = new Error('One or more native preference writes failed.');
+    error.name = 'StoragePersistenceError';
+    throw error;
+  }
 }
 
 export const storage = {

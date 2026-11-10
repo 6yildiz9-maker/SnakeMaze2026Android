@@ -40,6 +40,12 @@ export interface GameData {
   diedNearHighScore: boolean;
   diedFast: boolean;
   mode?: GameMode;
+  goldenFoodsThisGame?: number;
+  iceFoodsThisGame?: number;
+  poisonFoodsThisGame?: number;
+  mysteryFoodsThisGame?: number;
+  playedCustomMaze?: boolean;
+  longestSnakeThisGame?: number;
 }
 
 export interface Achievement {

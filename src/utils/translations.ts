@@ -54,6 +54,7 @@ export const translations = {
     mode_start_toast_time_attack: 'TIME ATTACK — 60s',
     mode_start_toast_classic: 'CLASSIC MODE — No Obstacles',
     mode_start_toast_maze: 'MAZE MODE — Dynamic Obstacles',
+    mode_start_toast_custom_maze: 'CUSTOM MAZE — {name}',
     mode_start_toast_survival: 'SURVIVAL MODE — High Speed',
     watch_rewarded_ad: 'SUPPORT DEVELOPER (WATCH AD)',
     ad_support_desc: 'Watch a short rewarded ad to support the project',
@@ -67,6 +68,7 @@ export const translations = {
     music_settings: 'Background Music',
     rank_decorations: 'Rank Decorations',
     music_hint: 'Tip: enable background music in Settings for a chiptune soundtrack.',
+    ad_privacy_options: 'Ad Privacy Options',
     ad_not_ready: 'Ad is not ready yet. Please try again later.',
 
     // Modes
@@ -116,16 +118,23 @@ export const translations = {
     // Food Types
     food_regular: 'Food',
     food_regular_desc: '+1 point',
+    food_regular_effect: '+1 POINT',
     food_bonus: 'Bonus Food',
     food_bonus_desc: '+3 points, +2 length',
+    food_bonus_effect: '+3 POINTS / +2 LENGTH',
     food_golden: 'Golden Apple',
     food_golden_desc: '+5 points',
+    food_golden_effect: '+5 POINTS / +1 LENGTH',
     food_ice: 'Ice Berry',
     food_ice_desc: 'Slows snake temporarily',
+    food_ice_effect: '+2 POINTS / SNAKE SLOWS',
     food_poison: 'Poison Mushroom',
     food_poison_desc: '-1 point',
+    food_poison_effect: '-1 POINT / SHORTER',
+    food_approach_direction: 'FROM {direction}',
     food_mystery: 'Mystery Egg',
     food_mystery_desc: 'Random effect',
+    food_mystery_effect: 'MYSTERY BONUS!',
 
     // Ranks
     rank_worm: 'Worm',
@@ -135,6 +144,9 @@ export const translations = {
     rank_cobra_king: 'Cobra King',
     rank_lord_of_serpents: 'Lord of Serpents',
     rank_mythical_leviathan: 'Mythical Leviathan',
+    rank_star_serpent: 'Star Serpent',
+    rank_cosmic_coil: 'Cosmic Coil',
+    rank_infinity_serpent: 'Infinity Serpent',
 
     // Achievements
     ach_egg_breaker: 'Eggshell Breaker',
@@ -175,6 +187,18 @@ export const translations = {
     ach_desc_so_close: 'Die when you are just 1 point away from your high score.',
     ach_fast_and_furious: 'Fast & Furious',
     ach_desc_fast_and_furious: 'Die by crashing into an obstacle within the first 5 seconds.',
+    ach_golden_bounty: 'Golden Bounty',
+    ach_desc_golden_bounty: 'Eat 3 golden foods in one game.',
+    ach_ice_breaker: 'Ice Breaker',
+    ach_desc_ice_breaker: 'Eat 3 ice foods in one game.',
+    ach_toxic_taster: 'Toxic Taster',
+    ach_desc_toxic_taster: 'Eat 3 poison foods in one game.',
+    ach_mystery_master: 'Mystery Master',
+    ach_desc_mystery_master: 'Eat 5 mystery foods in one game.',
+    ach_custom_cartographer: 'Custom Cartographer',
+    ach_desc_custom_cartographer: 'Play a maze you created.',
+    ach_long_serpent: 'Long Serpent',
+    ach_desc_long_serpent: 'Grow to 25 segments in one game.',
 
     // Directions
     turn_left: 'Turn Left',
@@ -237,6 +261,7 @@ export const translations = {
     mode_start_toast_time_attack: 'ZAMANA KARŞI — 60sn',
     mode_start_toast_classic: 'KLASİK MOD — Engelsiz',
     mode_start_toast_maze: 'LABİRENT MODU — Dinamik Engeller',
+    mode_start_toast_custom_maze: 'ÖZEL LABİRENT — {name}',
     mode_start_toast_survival: 'HAYATTA KALMA — Yüksek Hız',
     watch_rewarded_ad: 'GELİŞTİRİCİYİ DESTEKLE (REKLAM İZLE)',
     ad_support_desc: 'Projeyi desteklemek için kısa bir reklam izleyin',
@@ -250,6 +275,7 @@ export const translations = {
     music_settings: 'Arka Plan Müziği',
     rank_decorations: 'Rütbe Süsleri',
     music_hint: 'İpucu: chiptune müzik için Ayarlar’dan arka plan müziğini açın.',
+    ad_privacy_options: 'Reklam Gizlilik Seçenekleri',
 
     // Modes
     mode_maze: 'Labirent (Engelli)',
@@ -298,16 +324,23 @@ export const translations = {
     // Food Types
     food_regular: 'Normal Yem',
     food_regular_desc: '+1 puan',
+    food_regular_effect: '+1 PUAN',
     food_bonus: 'Bonus Yem',
     food_bonus_desc: '+3 puan, +2 boy',
+    food_bonus_effect: '+3 PUAN / +2 BOY',
     food_golden: 'Altın Elma',
     food_golden_desc: '+5 puan',
+    food_golden_effect: '+5 PUAN / +1 BOY',
     food_ice: 'Buz Meyvesi',
     food_ice_desc: 'Yılanı geçici yavaşlatır',
+    food_ice_effect: '+2 PUAN / YILAN YAVAŞLAR',
     food_poison: 'Zehirli Mantar',
     food_poison_desc: '-1 puan',
+    food_poison_effect: '-1 PUAN / KISALIR',
+    food_approach_direction: 'GELİŞ {direction}',
     food_mystery: 'Gizemli Yumurta',
     food_mystery_desc: 'Rastgele etki',
+    food_mystery_effect: 'GİZEMLİ BONUS!',
 
     // Ranks
     rank_worm: 'Solucan',
@@ -317,6 +350,9 @@ export const translations = {
     rank_cobra_king: 'Kral Kobra',
     rank_lord_of_serpents: 'Yılanlar Efendisi',
     rank_mythical_leviathan: 'Mistik Leviathan',
+    rank_star_serpent: 'Yıldız Yılan',
+    rank_cosmic_coil: 'Kozmik Sarmal',
+    rank_infinity_serpent: 'Sonsuzluk Yılanı',
 
     // Achievements
     ach_egg_breaker: 'Yumurta Kırıcı',
@@ -357,6 +393,18 @@ export const translations = {
     ach_desc_so_close: 'En yüksek skoruna sadece 1 puan kala öl.',
     ach_fast_and_furious: 'Hızlı ve Öfkeli',
     ach_desc_fast_and_furious: 'İlk 5 saniye içinde bir engele çarparak öl.',
+    ach_golden_bounty: 'Altın Hazinesi',
+    ach_desc_golden_bounty: 'Tek oyunda 3 altın yem ye.',
+    ach_ice_breaker: 'Buz Kırıcı',
+    ach_desc_ice_breaker: 'Tek oyunda 3 buz yemi ye.',
+    ach_toxic_taster: 'Zehir Tadımcısı',
+    ach_desc_toxic_taster: 'Tek oyunda 3 zehirli yem ye.',
+    ach_mystery_master: 'Gizem Ustası',
+    ach_desc_mystery_master: 'Tek oyunda 5 gizemli yem ye.',
+    ach_custom_cartographer: 'Labirent Kaşifi',
+    ach_desc_custom_cartographer: 'Kendi oluşturduğun bir labirentte oyna.',
+    ach_long_serpent: 'Uzun Yılan',
+    ach_desc_long_serpent: 'Tek oyunda 25 parçaya ulaş.',
 
     // Directions
     turn_left: 'Sola Dön',

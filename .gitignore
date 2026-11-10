@@ -37,3 +37,4 @@ logcat*.txt
 node_modules/
 dist/
 *.local
+/android/

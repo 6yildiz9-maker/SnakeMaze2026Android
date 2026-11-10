@@ -43,7 +43,7 @@ Nostaljik piksel ızgarası, tarama çizgisi (scanline) efektleri, chiptune 8-bi
 
 ### 🏆 KARİYER, İSTATİSTİKLER VE BAŞARIMLAR
 * **Solucan'dan Mistik Leviathan'a 7 Rütbe:** Skorunuz yükseldikçe yeni unvanlar kazanın.
-* **16+ Zorlu Başarım:** Duvar Fobisi, Dar Geçit Ustası, Işık Hızı, Ouroboros ve daha fazlası!
+* **19 Zorlu Başarım:** Duvar Fobisi, Dar Geçit Ustası, Işık Hızı, Ouroboros ve daha fazlası!
 * **Günlük Görevler:** Her gün yenilenen görevleri tamamlayarak kupa toplayın.
 * **Ayrıntılı Kariyer Analizi:** En uzun yılan, toplam yenen yem, oyun süreleri ve her mod için ayrı rekor tablosu.
 
@@ -59,6 +59,6 @@ Nostaljik piksel ızgarası, tarama çizgisi (scanline) efektleri, chiptune 8-bi
 ### 🔒 GİZLİLİK VE ÇEVRİMDIŞI (OFFLINE)
 * İnternet bağlantısı gerektirmez, tamamen çevrimdışı oynanabilir.
 * Üyelik veya giriş gerekmez.
-* Sıfır kişisel veri toplama — skorlarınız ve ayarlarınız sadece cihazınızda kalır.
+* Skorlarınız, ayarlarınız ve özel labirentler cihazınızda saklanır. Android sürümündeki AdMob reklamları Google'ın gizlilik bildiriminde belirtilen reklam kimliği, yaklaşık konum, reklam etkileşimi ve tanılama verilerini işleyebilir.
 
 **Snake Maze 2026**'yı hemen indirin ve zamansız yılan macerasını yeniden keşfedin!

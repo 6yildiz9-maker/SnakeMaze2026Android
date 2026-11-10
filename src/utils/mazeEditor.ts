@@ -10,7 +10,46 @@ export interface CustomMaze {
   createdAt: number;
 }
 
+function isPoint(value: unknown): value is Point {
+  return Array.isArray(value) &&
+    value.length === 2 &&
+    value.every((coordinate) => Number.isInteger(coordinate));
+}
+
 export class MazeEditorService {
+  private validateObstacles(obstacles: Point[]): string | null {
+    const midX = Math.floor(GameLogic.DEFAULT_GRID_SIZE / 2);
+    const midY = Math.floor(GameLogic.DEFAULT_GRID_HEIGHT / 2);
+    const blockedStartCells = new Set([
+      `${midX},${midY}`,
+      `${midX},${midY + 1}`,
+      `${midX},${midY + 2}`,
+      `${midX},${midY - 4}`,
+    ]);
+    const seen = new Set<string>();
+
+    for (const point of obstacles) {
+      if (
+        !Array.isArray(point) ||
+        point.length !== 2 ||
+        !point.every(Number.isInteger) ||
+        point[0] < 0 ||
+        point[0] >= GameLogic.DEFAULT_GRID_SIZE ||
+        point[1] < 0 ||
+        point[1] >= GameLogic.DEFAULT_GRID_HEIGHT
+      ) {
+        return 'Map contains an invalid cell.';
+      }
+
+      const key = `${point[0]},${point[1]}`;
+      if (seen.has(key)) return 'Map contains duplicate cells.';
+      if (blockedStartCells.has(key)) return 'Keep the snake start and first food cells clear.';
+      seen.add(key);
+    }
+
+    return null;
+  }
+
   public getCustomMazes(): CustomMaze[] {
     return storage.getJson<CustomMaze[]>(STORAGE_KEYS.customMazes, []);
   }
@@ -19,6 +58,11 @@ export class MazeEditorService {
     if (!name.trim()) {
       return { success: false, error: 'Name cannot be empty' };
     }
+    if (!Array.isArray(obstacles)) {
+      return { success: false, error: 'Map obstacle data is invalid.' };
+    }
+    const invalidMap = this.validateObstacles(obstacles);
+    if (invalidMap) return { success: false, error: invalidMap };
 
     // Default head at center, food at top-center
     const midX = Math.floor(GameLogic.DEFAULT_GRID_SIZE / 2);
@@ -44,9 +88,9 @@ export class MazeEditorService {
 
     const mazes = this.getCustomMazes();
     const newMaze: CustomMaze = {
-      id: `maze_${Date.now()}`,
+      id: `maze_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       name: name.trim(),
-      obstacles,
+      obstacles: obstacles.map(([x, y]) => [x, y]),
       createdAt: Date.now(),
     };
 
@@ -66,14 +110,24 @@ export class MazeEditorService {
       n: maze.name,
       o: maze.obstacles,
     });
-    return btoa(json);
+    const bytes = new TextEncoder().encode(json);
+    return btoa(String.fromCharCode(...bytes));
   }
 
   public importFromBase64(base64Str: string): { success: boolean; error?: string; maze?: CustomMaze } {
     try {
       const decoded = atob(base64Str);
-      const parsed = JSON.parse(decoded);
-      if (!parsed.n || !Array.isArray(parsed.o)) {
+      const bytes = Uint8Array.from(decoded, (char) => char.charCodeAt(0));
+      const parsed: unknown = JSON.parse(new TextDecoder().decode(bytes));
+      if (
+        typeof parsed !== 'object' ||
+        parsed === null ||
+        !('n' in parsed) ||
+        typeof parsed.n !== 'string' ||
+        !('o' in parsed) ||
+        !Array.isArray(parsed.o) ||
+        !parsed.o.every(isPoint)
+      ) {
         return { success: false, error: 'Invalid map code structure' };
       }
       return this.saveMaze(parsed.n, parsed.o);

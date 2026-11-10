@@ -1,24 +1,31 @@
-name: Build Android Release
+name: Build Android
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
+  pull_request:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      buildPlayRelease:
+        description: Build a signed Play release using configured upload-key secrets
+        type: boolean
+        required: true
+        default: false
 
 jobs:
-  build-aab:
-    name: Build Android App Bundle (AAB)
+  build:
+    name: Test and build Android artifacts
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Java 17
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '17'
+          distribution: temurin
+          java-version: '21'
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
@@ -32,28 +39,90 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit tests
-        run: npm test
-
-      - name: Build web assets
-        run: npm run build
-
-      - name: Sync Capacitor Android
+      - name: Run validation
         run: |
-          if [ ! -d "android" ]; then
-            npx cap add android
-          fi
-          npx cap sync android
+          npm test
+          npm run lint
+          npm run build
+        env:
+          VITE_ADMOB_USE_TEST_IDS: 'true'
 
-      - name: Build Android Bundle (AAB)
+      - name: Add and sync Capacitor Android
+        run: |
+          npx cap add android
+          npx cap sync android
+          node scripts/configure-android-admob.mjs
+          node scripts/configure-android-immersive.mjs
+
+      - name: Build debug APK with test ads
         working-directory: android
         run: |
           chmod +x gradlew
-          ./gradlew bundleRelease --stacktrace
+          ./gradlew assembleDebug
 
-      - name: Upload Android App Bundle (AAB)
+      - name: Upload debug APK
         uses: actions/upload-artifact@v4
         with:
-          name: snake-maze-2026-release-bundle
+          name: snake-maze-2026-debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
+
+      - name: Build Play web assets and sync production AdMob units
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.buildPlayRelease }}
+        env:
+          VITE_ADMOB_USE_TEST_IDS: 'false'
+        run: |
+          npm run build
+          npx cap sync android
+          node scripts/configure-android-admob.mjs
+          node scripts/configure-android-immersive.mjs
+
+      - name: Require and configure Play upload key
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.buildPlayRelease }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::$name is required to build a signed Play release."
+              exit 1
+            fi
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
+          cat >> android/app/build.gradle <<'EOF'
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("upload-keystore.jks")
+                      storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                      keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                      keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOF
+
+      - name: Build signed Play AAB
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.buildPlayRelease }}
+        working-directory: android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease
+
+      - name: Upload signed Play AAB
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.buildPlayRelease }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: snake-maze-2026-play-aab
           path: android/app/build/outputs/bundle/release/*.aab
-          if-no-files-found: warn
+          if-no-files-found: error

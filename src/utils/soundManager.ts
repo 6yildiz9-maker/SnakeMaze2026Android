@@ -71,10 +71,38 @@ class RetroSoundManager {
     this.isMusicEnabled = enabled;
     storage.setItem(STORAGE_KEYS.musicEnabled, String(enabled));
     if (enabled) {
-      this.initCtx();
-      this.startMusicLoop();
+      void this.unlockAudio().then(() => {
+        this.startMusicLoop();
+      });
     }
     else this.stopMusicLoop();
+  }
+
+  public async unlockAudio(): Promise<void> {
+    const ctx = this.initCtx();
+    if (ctx?.state === 'suspended') {
+      try {
+        await ctx.resume();
+      } catch (error) {
+        console.warn('Unable to unlock audio from user interaction:', error);
+      }
+    }
+  }
+
+  public async suspendAudio(): Promise<void> {
+    if (this.musicTimer) clearTimeout(this.musicTimer);
+    this.musicTimer = null;
+    for (const audio of Object.values(this.audioFiles)) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+    if (this.ctx && this.ctx.state === 'running') {
+      try {
+        await this.ctx.suspend();
+      } catch (error) {
+        console.warn('Unable to suspend audio while the app is inactive:', error);
+      }
+    }
   }
 
   public getMusicEnabled(): boolean {
@@ -83,29 +111,28 @@ class RetroSoundManager {
 
   public setMusicMode(mode: 'playing' | 'paused' | 'stopped') {
     this.musicMode = mode;
-    if (mode === 'stopped' || !this.isMusicEnabled) {
+    if (mode !== 'playing' || !this.isMusicEnabled) {
       this.stopMusicLoop();
       return;
     }
     this.startMusicLoop();
     if (this.musicGain && this.ctx) {
-      const target = mode === 'paused' ? 0.008 : 0.035;
-      this.musicGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.08);
+      this.musicGain.gain.setTargetAtTime(0.12, this.ctx.currentTime, 0.08);
     }
   }
 
   private startMusicLoop() {
-    if (!this.isMusicEnabled || this.musicMode === 'stopped' || this.musicTimer) return;
+    if (!this.isMusicEnabled || this.musicMode !== 'playing' || this.musicTimer) return;
     const ctx = this.initCtx();
     if (!ctx) return;
     if (!this.musicGain) {
       this.musicGain = ctx.createGain();
-      this.musicGain.gain.value = this.musicMode === 'paused' ? 0.008 : 0.035;
+      this.musicGain.gain.value = 0.12;
       this.musicGain.connect(ctx.destination);
     }
     const notes = [262, 330, 392, 330, 294, 349, 440, 349, 262, 330, 392, 523, 440, 392, 330, 294];
     const playNextNote = () => {
-      if (!this.isMusicEnabled || this.musicMode === 'stopped' || !this.ctx || !this.musicGain) {
+      if (!this.isMusicEnabled || this.musicMode !== 'playing' || !this.ctx || !this.musicGain) {
         this.musicTimer = null;
         return;
       }
