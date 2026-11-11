@@ -3,8 +3,9 @@ import { join } from 'node:path';
 
 const root = process.cwd();
 const configPath = join(root, 'capacitor.config.ts');
-const manifestPath = join(root, 'android', 'app', 'src', 'main', 'AndroidManifest.xml');
-const stringsPath = join(root, 'android', 'app', 'src', 'main', 'res', 'values', 'strings.xml');
+const androidPath = join(root, 'apps', 'android');
+const manifestPath = join(androidPath, 'app', 'src', 'main', 'AndroidManifest.xml');
+const stringsPath = join(androidPath, 'app', 'src', 'main', 'res', 'values', 'strings.xml');
 const config = readFileSync(configPath, 'utf8');
 const appId = config.match(/AdMob:\s*\{\s*appId:\s*['"]([^'"]+)['"]/)?.[1];
 
@@ -13,7 +14,7 @@ if (!appId || !/^ca-app-pub-\d+~\d+$/.test(appId)) {
 }
 
 let manifest = readFileSync(manifestPath, 'utf8');
-const appIdMetadata = /<meta-data\b(?=[^>]*android:name=["']com\.google\.android\.gms\.ads\.APPLICATION_ID["'])[^>]*\/>/s;
+const appIdMetadata = /^[ \t]*<meta-data\b(?=[^>]*android:name=["']com\.google\.android\.gms\.ads\.APPLICATION_ID["'])[^>]*\/>/ms;
 const metadata = [
   '        <meta-data',
   '            android:name="com.google.android.gms.ads.APPLICATION_ID"',

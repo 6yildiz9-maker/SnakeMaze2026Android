@@ -6,7 +6,7 @@ This checklist records reproducible acceptance steps. Automated checks are recor
 
 | Check | Acceptance criterion | Status |
 |---|---|---|
-| Android source in clean checkout | `npm ci`, `npm run build`, `npx cap sync android`, then Gradle `assembleDebug` complete without adding generated Capacitor assets or local SDK files to Git. | Local sync/build passed; clean-checkout CI pending |
+| Android source in clean checkout | `npm ci`, `npm run build`, `npx cap sync android`, then Gradle `assembleDebug` from `apps/android` complete without adding generated Capacitor assets or local SDK files to Git. | Local sync/build passed; clean-checkout CI pending |
 | Play bundle | AAB builds only when the upload-key secrets are configured; signing materials are supplied from secrets and are absent from the repository. | Pending release secrets/workflow |
 | Ad configuration | Debug uses Google test ad units. Play build uses configured production units and contains no test ad-unit IDs. | Run in CI/release review |
 | Unit/type/build checks | `npm test`, `npm run lint`, and `npm run build` pass. | Run in CI |

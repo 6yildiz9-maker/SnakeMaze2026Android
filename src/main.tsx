@@ -1,7 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { initializeStorage } from './utils/storage.ts';
-import { isCapacitor } from './utils/platform.ts';
 import './index.css';
 import '@fontsource/vt323/latin-400.css';
 import '@fontsource/vt323/latin-ext-400.css';
@@ -38,11 +37,3 @@ void bootstrap().catch((error: unknown) => {
     </main>
   );
 });
-
-if (!isCapacitor() && 'serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch((error: unknown) => {
-      console.error('Service worker registration failed:', error);
-    });
-  });
-}

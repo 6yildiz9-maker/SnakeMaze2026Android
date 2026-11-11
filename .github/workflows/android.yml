@@ -54,7 +54,7 @@ jobs:
           node scripts/configure-android-immersive.mjs
 
       - name: Build debug APK with test ads
-        working-directory: android
+        working-directory: apps/android
         run: |
           chmod +x gradlew
           ./gradlew assembleDebug
@@ -63,7 +63,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pixelfang-snake-maze-debug-apk
-          path: android/app/build/outputs/apk/debug/*.apk
+          path: apps/android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
       - name: Build Play web assets and sync production AdMob units
@@ -91,8 +91,8 @@ jobs:
               exit 1
             fi
           done
-          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/upload-keystore.jks
-          cat >> android/app/build.gradle <<'EOF'
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > apps/android/app/upload-keystore.jks
+          cat >> apps/android/app/build.gradle <<'EOF'
 
           android {
               signingConfigs {
@@ -113,7 +113,7 @@ jobs:
 
       - name: Build signed Play AAB
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.buildPlayRelease }}
-        working-directory: android
+        working-directory: apps/android
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
@@ -123,5 +123,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: pixelfang-snake-maze-play-aab
-          path: android/app/build/outputs/bundle/release/*.aab
+          path: apps/android/app/build/outputs/bundle/release/*.aab
           if-no-files-found: error
