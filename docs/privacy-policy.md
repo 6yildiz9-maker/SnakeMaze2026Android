@@ -10,7 +10,7 @@ Pixelfang: Snake Maze ("we", "our", or "app") is a retro snake game designed for
 - **Network and offline use:** Core gameplay works offline after installation. Ad requests require an internet connection.
 
 ## 2. Children's Privacy
-The app does not knowingly collect personally identifiable information from children under the age of 13.
+The app is not directed at children under 13 and does not knowingly collect personally identifiable information from children under that age.
 
 ## 3. Contact
-**Before publishing, replace this line with the developer's monitored privacy contact email address.**
+For privacy questions or requests, contact the developer at **6.yildiz.9@gmail.com**.
